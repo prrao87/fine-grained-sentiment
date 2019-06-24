@@ -10,13 +10,16 @@ class Utils:
     def __init__(self) -> None:
         pass
 
-    def test_data(self, fname: str,
-                  colnames=['truth', 'sentence']) -> pd.DataFrame:
+    def test_data(self, fname: str, lower_case: bool=False,
+                  colnames=['truth', 'text']) -> pd.DataFrame:
         "Read in test data into a Pandas DataFrame"
         df = pd.read_csv(fname, sep='\t', header=None, names=colnames)
         df['truth'] = df['truth'].str.replace('__label__', '')
         # Categorical data type for truth labels
         df['truth'] = df['truth'].astype(int).astype('category')
+        # Optional lowercase for test data (if model was trained on lowercased text)
+        if lower_case:
+            df['text'] = df['text'].str.lower()
         return df
 
     def accuracy(self, df: pd.DataFrame, pred_column: str) -> Tuple[float, float]:
@@ -35,9 +38,11 @@ class TextBlobSentiment(Utils):
         from textblob import TextBlob
         return TextBlob(text).sentiment.polarity
 
-    def predict(self, fname: str, pred_column: str) -> pd.DataFrame:
-        df = super().test_data(fname)
-        df['score'] = df['sentence'].apply(self.score)
+    def predict(self, fname: str,
+                pred_column: str,
+                lower_case: bool) -> pd.DataFrame:
+        df = super().test_data(fname, lower_case)
+        df['score'] = df['text'].apply(self.score)
         # Convert float score to category based on binning
         df[pred_column] = pd.cut(df['score'],
                                  bins=5,
@@ -66,9 +71,11 @@ class VaderSentiment(Utils):
     def score(self, text: str) -> float:
         return self.vader.polarity_scores(text)['compound']
 
-    def predict(self, fname: str, pred_column: str) -> pd.DataFrame:
-        df = super().test_data(fname)
-        df['score'] = df['sentence'].apply(self.score)
+    def predict(self, fname: str,
+                pred_column: str,
+                lower_case: bool) -> pd.DataFrame:
+        df = super().test_data(fname, lower_case)
+        df['score'] = df['text'].apply(self.score)
         # Convert float score to category based on binning
         df[pred_column] = pd.cut(df['score'],
                                  bins=5,
@@ -101,9 +108,11 @@ class FastTextSentiment(Utils):
         pred = int(labels[0][-1])
         return pred
 
-    def predict(self, fname: str, pred_column: str) -> pd.DataFrame:
-        df = super().test_data(fname)
-        df[pred_column] = df['sentence'].str.lower().apply(self.score)
+    def predict(self, fname: str,
+                pred_column: str,
+                lower_case: bool) -> pd.DataFrame:
+        df = super().test_data(fname, lower_case)
+        df[pred_column] = df['text'].apply(self.score)
         return df
 
     def accuracy(self, df: pd.DataFrame, pred_column: str) -> Tuple[float, float]:
@@ -135,12 +144,14 @@ class FlairSentiment(Utils):
         pred = int(doc.labels[0].value)
         return pred
 
-    def predict(self, fname: str, pred_column: str) -> pd.DataFrame:
+    def predict(self, fname: str,
+                pred_column: str,
+                lower_case: bool) -> pd.DataFrame:
         "Use tqdm to display model prediction status bar"
         from tqdm import tqdm
         tqdm.pandas()
-        df = super().test_data(fname)
-        df[pred_column] = df['sentence'].progress_apply(self.score)
+        df = super().test_data(fname, lower_case)
+        df[pred_column] = df['text'].progress_apply(self.score)
         return df
 
     def accuracy(self, df: pd.DataFrame, pred_column: str) -> Tuple[float, float]:
@@ -151,32 +162,44 @@ class FlairSentiment(Utils):
 
 
 # Run methods
-def textblob(fname: str, pred_column='textblob_pred') -> None:
+def textblob(fname: str,
+             pred_column='textblob_pred', 
+             lower_case=False) -> pd.DataFrame:
     "Run TextBlob sentiment model"
     tb = TextBlobSentiment()
-    result = tb.predict(fname, pred_column)
+    result = tb.predict(fname, pred_column, lower_case)
     _ = tb.accuracy(result, pred_column)
+    return result
 
 
-def vader(fname: str, pred_column='vader_pred') -> None:
+def vader(fname: str,
+          pred_column='vader_pred',
+          lower_case=False) -> pd.DataFrame:
     "Run Vader sentiment model"
     va = VaderSentiment()
-    result = va.predict(fname, pred_column)
+    result = va.predict(fname, pred_column, lower_case)
     _ = va.accuracy(result, pred_column)
+    return result
 
 
-def fasttext(fname: str, model: str, pred_column='fasttext_pred') -> None:
+def fasttext(fname: str, model: str, 
+             pred_column='fasttext_pred',
+             lower_case=False) -> pd.DataFrame:
     "Run FastText sentiment model"
     ft = FastTextSentiment(model)
-    result = ft.predict(fname, pred_column)
+    result = ft.predict(fname, pred_column, lower_case)
     _ = ft.accuracy(result, pred_column)
+    return result
 
 
-def flair(fname: str, model: str, pred_column='flair_pred') -> None:
+def flair(fname: str, model: str,
+          pred_column='flair_pred',
+          lower_case=False) -> pd.DataFrame:
     "Run Flair sentiment model"
     fl = FlairSentiment(model)
-    result = fl.predict(fname, pred_column)
+    result = fl.predict(fname, pred_column, lower_case)
     _ = fl.accuracy(result, pred_column)
+    return result
 
 
 if __name__ == "__main__":

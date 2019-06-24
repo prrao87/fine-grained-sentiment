@@ -22,10 +22,10 @@ class Utils:
             df['text'] = df['text'].str.lower()
         return df
 
-    def accuracy(self, df: pd.DataFrame, pred_column: str) -> Tuple[float, float]:
+    def accuracy(self, df: pd.DataFrame) -> Tuple[float, float]:
         "Prediction accuracy (percentage) and F1 score"
-        acc = accuracy_score(df['truth'], df[pred_column])*100
-        f1 = f1_score(df['truth'], df[pred_column], average='macro')
+        acc = accuracy_score(df['truth'], df['pred'])*100
+        f1 = f1_score(df['truth'], df['pred'], average='macro')
         return acc, f1
 
 
@@ -33,26 +33,28 @@ class TextBlobSentiment(Utils):
     """Predict sentiment scores using TextBlob.
     https://textblob.readthedocs.io/en/dev/
     """
+    def __init__(self, model_file: str=None) -> None:
+        pass
+
     def score(self, text: str) -> float:
         # pip install textblob
         from textblob import TextBlob
         return TextBlob(text).sentiment.polarity
 
     def predict(self, fname: str,
-                pred_column: str,
                 lower_case: bool) -> pd.DataFrame:
         df = super().test_data(fname, lower_case)
         df['score'] = df['text'].apply(self.score)
         # Convert float score to category based on binning
-        df[pred_column] = pd.cut(df['score'],
+        df['pred'] = pd.cut(df['score'],
                                  bins=5,
                                  labels=[1, 2, 3, 4, 5])
         df = df.drop('score', axis=1)
         return df
 
-    def accuracy(self, df: pd.DataFrame, pred_column: str) -> Tuple[float, float]:
+    def accuracy(self, df: pd.DataFrame) -> Tuple[float, float]:
         "Return accuracy metrics"
-        acc, f1 = super().accuracy(df, pred_column)
+        acc, f1 = super().accuracy(df)
         print("Accuracy: {}\nMacro F1-score: {}".format(acc, f1))
         return acc, f1
 
@@ -62,7 +64,7 @@ class VaderSentiment(Utils):
     Tested using nltk.sentiment.vader and Python 3.6+
     https://www.nltk.org/_modules/nltk/sentiment/vader.html
     """
-    def __init__(self) -> None:
+    def __init__(self, model_file: str=None) -> None:
         # pip install nltk
         # python > import nltk > nltk.download() > d > vader_lexicon
         from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -72,20 +74,19 @@ class VaderSentiment(Utils):
         return self.vader.polarity_scores(text)['compound']
 
     def predict(self, fname: str,
-                pred_column: str,
                 lower_case: bool) -> pd.DataFrame:
         df = super().test_data(fname, lower_case)
         df['score'] = df['text'].apply(self.score)
         # Convert float score to category based on binning
-        df[pred_column] = pd.cut(df['score'],
+        df['pred'] = pd.cut(df['score'],
                                  bins=5,
                                  labels=[1, 2, 3, 4, 5])
         df = df.drop('score', axis=1)
         return df
 
-    def accuracy(self, df: pd.DataFrame, pred_column: str) -> Tuple[float, float]:
+    def accuracy(self, df: pd.DataFrame) -> Tuple[float, float]:
         "Return accuracy metrics"
-        acc, f1 = super().accuracy(df, pred_column)
+        acc, f1 = super().accuracy(df)
         print("Accuracy: {}\nMacro F1-score: {}".format(acc, f1))
         return acc, f1
 
@@ -94,13 +95,13 @@ class FastTextSentiment(Utils):
     """Predict sentiment scores using FastText.
     https://fasttext.cc/
     """
-    def __init__(self, fasttext_model: str) -> None:
+    def __init__(self, model_file: str=None) -> None:
         # pip install fasttext
         import fastText
         try:
-            self.model = fastText.load_model(fasttext_model)
+            self.model = fastText.load_model(model_file)
         except ValueError:
-            raise Exception("Cannot find specified model file: '{}'.".format(fasttext_model))
+            raise Exception("Cannot find specified classifier model file: '{}'.".format(model_file))
 
     def score(self, text: str) -> float:
         # Predict just the top label (hence 1 index below)
@@ -109,15 +110,14 @@ class FastTextSentiment(Utils):
         return pred
 
     def predict(self, fname: str,
-                pred_column: str,
                 lower_case: bool) -> pd.DataFrame:
         df = super().test_data(fname, lower_case)
-        df[pred_column] = df['text'].apply(self.score)
+        df['pred'] = df['text'].apply(self.score)
         return df
 
-    def accuracy(self, df: pd.DataFrame, pred_column: str) -> Tuple[float, float]:
+    def accuracy(self, df: pd.DataFrame) -> Tuple[float, float]:
         "Return accuracy metrics"
-        acc, f1 = super().accuracy(df, pred_column)
+        acc, f1 = super().accuracy(df)
         print("Accuracy: {}\nMacro F1-score: {}".format(acc, f1))
         return acc, f1
 
@@ -127,15 +127,14 @@ class FlairSentiment(Utils):
     https://github.com/zalandoresearch/flair
     Tested on Flair version 0.4.2+ and Python 3.6+
     """
-    def __init__(self, flair_model: str) -> None:
+    def __init__(self, model_file: str=None) -> None:
         "Use the latest version of Flair NLP from their GitHub repo!"
         # pip install flair
-        # pip install tqdm
         from flair.models import TextClassifier
         try:
-            self.model = TextClassifier.load(flair_model)
+            self.model = TextClassifier.load(model_file)
         except ValueError:
-            raise Exception("Cannot find specified model file: '{}'.".format(flair_model))
+            raise Exception("Cannot find specified classifier model file: '{}'.".format(model_file))
 
     def score(self, text: str) -> float:
         from flair.data import Sentence
@@ -145,66 +144,66 @@ class FlairSentiment(Utils):
         return pred
 
     def predict(self, fname: str,
-                pred_column: str,
                 lower_case: bool) -> pd.DataFrame:
         "Use tqdm to display model prediction status bar"
+        # pip install tqdm
         from tqdm import tqdm
         tqdm.pandas()
         df = super().test_data(fname, lower_case)
-        df[pred_column] = df['text'].progress_apply(self.score)
+        df['pred'] = df['text'].progress_apply(self.score)
         return df
 
-    def accuracy(self, df: pd.DataFrame, pred_column: str) -> Tuple[float, float]:
+    def accuracy(self, df: pd.DataFrame) -> Tuple[float, float]:
         "Return accuracy metrics"
-        acc, f1 = super().accuracy(df, pred_column)
+        acc, f1 = super().accuracy(df)
         print("Accuracy: {}\nMacro F1-score: {}".format(acc, f1))
         return acc, f1
 
 
 # Run methods
 def textblob(fname: str,
-             pred_column='textblob_pred', 
+             model_file: str=None,
              lower_case=False) -> pd.DataFrame:
     "Run TextBlob sentiment model"
     tb = TextBlobSentiment()
-    result = tb.predict(fname, pred_column, lower_case)
-    _ = tb.accuracy(result, pred_column)
+    result = tb.predict(fname, lower_case)
+    _ = tb.accuracy(result)
     return result
 
 
 def vader(fname: str,
-          pred_column='vader_pred',
+          model_file: str=None,
           lower_case=False) -> pd.DataFrame:
     "Run Vader sentiment model"
     va = VaderSentiment()
-    result = va.predict(fname, pred_column, lower_case)
-    _ = va.accuracy(result, pred_column)
+    result = va.predict(fname, lower_case)
+    _ = va.accuracy(result)
     return result
 
 
-def fasttext(fname: str, model: str, 
-             pred_column='fasttext_pred',
+def fasttext(fname: str,
+             model_file: str=None,
              lower_case=False) -> pd.DataFrame:
     "Run FastText sentiment model"
-    ft = FastTextSentiment(model)
-    result = ft.predict(fname, pred_column, lower_case)
-    _ = ft.accuracy(result, pred_column)
+    ft = FastTextSentiment(model_file)
+    result = ft.predict(fname, lower_case)
+    _ = ft.accuracy(result)
     return result
 
 
-def flair(fname: str, model: str,
-          pred_column='flair_pred',
+def flair(fname: str,
+          model_file: str=None,
           lower_case=False) -> pd.DataFrame:
     "Run Flair sentiment model"
-    fl = FlairSentiment(model)
-    result = fl.predict(fname, pred_column, lower_case)
-    _ = fl.accuracy(result, pred_column)
+    fl = FlairSentiment(model_file)
+    result = fl.predict(fname, lower_case)
+    _ = fl.accuracy(result)
     return result
 
 
 if __name__ == "__main__":
     fname = 'data/sst/sst_test.txt'
-    textblob(fname)
+    # textblob(fname)
     # vader(fname)
-    # fasttext(fname, model='models/fasttext/sst.bin')
-    # flair(fname, "models/flair/best-model.pt")
+    fasttext(fname, model_file='models/fasttext/sst.bin')
+    # flair(fname, model_file="models/flair/best-model.pt")

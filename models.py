@@ -90,7 +90,10 @@ class FastTextSentiment(Utils):
     def __init__(self, fasttext_model: str) -> None:
         # pip install fasttext
         import fastText
-        self.model = fastText.load_model(fasttext_model)
+        try:
+            self.model = fastText.load_model(fasttext_model)
+        except ValueError:
+            raise Exception("Cannot find specified model file: '{}'.".format(fasttext_model))
 
     def score(self, text: str) -> float:
         # Predict just the top label (hence 1 index below)
@@ -120,7 +123,10 @@ class FlairSentiment(Utils):
         # pip install flair
         # pip install tqdm
         from flair.models import TextClassifier
-        self.model = TextClassifier.load(flair_model)
+        try:
+            self.model = TextClassifier.load(flair_model)
+        except ValueError:
+            raise Exception("Cannot find specified model file: '{}'.".format(flair_model))
 
     def score(self, text: str) -> float:
         from flair.data import Sentence

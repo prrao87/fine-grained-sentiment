@@ -1,4 +1,4 @@
-from typing import Tuple
+import argparse
 import pandas as pd
 from sklearn.metrics import f1_score, accuracy_score
 
@@ -22,11 +22,11 @@ class Utils:
             df['text'] = df['text'].str.lower()
         return df
 
-    def accuracy(self, df: pd.DataFrame) -> Tuple[float, float]:
+    def accuracy(self, df: pd.DataFrame) -> None:
         "Prediction accuracy (percentage) and F1 score"
         acc = accuracy_score(df['truth'], df['pred'])*100
         f1 = f1_score(df['truth'], df['pred'], average='macro')
-        return acc, f1
+        print("Accuracy: {}\nMacro F1-score: {}".format(acc, f1))
 
 
 class TextBlobSentiment(Utils):
@@ -51,12 +51,6 @@ class TextBlobSentiment(Utils):
                                  labels=[1, 2, 3, 4, 5])
         df = df.drop('score', axis=1)
         return df
-
-    def accuracy(self, df: pd.DataFrame) -> Tuple[float, float]:
-        "Return accuracy metrics"
-        acc, f1 = super().accuracy(df)
-        print("Accuracy: {}\nMacro F1-score: {}".format(acc, f1))
-        return acc, f1
 
 
 class VaderSentiment(Utils):
@@ -84,12 +78,6 @@ class VaderSentiment(Utils):
         df = df.drop('score', axis=1)
         return df
 
-    def accuracy(self, df: pd.DataFrame) -> Tuple[float, float]:
-        "Return accuracy metrics"
-        acc, f1 = super().accuracy(df)
-        print("Accuracy: {}\nMacro F1-score: {}".format(acc, f1))
-        return acc, f1
-
 
 class FastTextSentiment(Utils):
     """Predict sentiment scores using FastText.
@@ -114,12 +102,6 @@ class FastTextSentiment(Utils):
         df = super().test_data(fname, lower_case)
         df['pred'] = df['text'].apply(self.score)
         return df
-
-    def accuracy(self, df: pd.DataFrame) -> Tuple[float, float]:
-        "Return accuracy metrics"
-        acc, f1 = super().accuracy(df)
-        print("Accuracy: {}\nMacro F1-score: {}".format(acc, f1))
-        return acc, f1
 
 
 class FlairSentiment(Utils):
@@ -153,57 +135,33 @@ class FlairSentiment(Utils):
         df['pred'] = df['text'].progress_apply(self.score)
         return df
 
-    def accuracy(self, df: pd.DataFrame) -> Tuple[float, float]:
-        "Return accuracy metrics"
-        acc, f1 = super().accuracy(df)
-        print("Accuracy: {}\nMacro F1-score: {}".format(acc, f1))
-        return acc, f1
 
-
-# Run methods
-def textblob(fname: str,
-             model_file: str=None,
-             lower_case=False) -> pd.DataFrame:
-    "Run TextBlob sentiment model"
-    tb = TextBlobSentiment()
-    result = tb.predict(fname, lower_case)
-    _ = tb.accuracy(result)
-    return result
-
-
-def vader(fname: str,
-          model_file: str=None,
-          lower_case=False) -> pd.DataFrame:
-    "Run Vader sentiment model"
-    va = VaderSentiment()
-    result = va.predict(fname, lower_case)
-    _ = va.accuracy(result)
-    return result
-
-
-def fasttext(fname: str,
-             model_file: str=None,
-             lower_case=False) -> pd.DataFrame:
-    "Run FastText sentiment model"
-    ft = FastTextSentiment(model_file)
-    result = ft.predict(fname, lower_case)
-    _ = ft.accuracy(result)
-    return result
-
-
-def flair(fname: str,
-          model_file: str=None,
-          lower_case=False) -> pd.DataFrame:
-    "Run Flair sentiment model"
-    fl = FlairSentiment(model_file)
-    result = fl.predict(fname, lower_case)
-    _ = fl.accuracy(result)
-    return result
+def main(fname: str, method_class: Utils, model_file: str, lower_case: bool) -> None:
+    "Run sentiment classification based on specified method"
+    result = method_class.predict(fname, lower_case)
+    method_class.accuracy(result)
 
 
 if __name__ == "__main__":
-    fname = 'data/sst/sst_test.txt'
-    # textblob(fname)
-    # vader(fname)
-    fasttext(fname, model_file='models/fasttext/sst.bin')
-    # flair(fname, model_file="models/flair/best-model.pt")
+    # List of implemented sentiment classification methods
+    METHODS = {
+        'textblob': TextBlobSentiment,
+        'vader': VaderSentiment,
+        'fasttext': FastTextSentiment,
+        'flair': FlairSentiment,
+    }
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--test', type=str, help="Path (str) to test data file", default="data/sst/sst_test.txt")
+    parser.add_argument('--method', type=str, help="Sentiment classifier method", default="textblob")
+    parser.add_argument('--model', type=str, help="Path (str) to trained classifier model file", default="models/fasttext/sst.bin")
+    parser.add_argument('--lower', action="store_true", help="Flag to convert test data strings \
+                        to lower case (for lower-case trained classifiers)")
+    args = parser.parse_args()
+
+    fname = args.test   # Test file path (str)
+    model_file = args.model
+    lower_case = args.lower
+    method_class = METHODS[args.method](model_file)   # Instantiate the implemented classifier class
+
+    main(fname, method_class, model_file, lower_case)

@@ -3,8 +3,8 @@ import pandas as pd
 from sklearn.metrics import f1_score, accuracy_score
 
 
-class Utils:
-    """Class that houses common utilities for reading in test data
+class Base:
+    """Base class that houses common utilities for reading in test data
     and calculating model accuracy and F1 scores.
     """
     def __init__(self) -> None:
@@ -29,7 +29,7 @@ class Utils:
         print("Accuracy: {}\nMacro F1-score: {}".format(acc, f1))
 
 
-class TextBlobSentiment(Utils):
+class TextBlobSentiment(Base):
     """Predict sentiment scores using TextBlob.
     https://textblob.readthedocs.io/en/dev/
     """
@@ -41,19 +41,18 @@ class TextBlobSentiment(Utils):
         from textblob import TextBlob
         return TextBlob(text).sentiment.polarity
 
-    def predict(self, fname: str,
-                lower_case: bool) -> pd.DataFrame:
+    def predict(self, fname: str, lower_case: bool) -> pd.DataFrame:
         df = super().test_data(fname, lower_case)
         df['score'] = df['text'].apply(self.score)
         # Convert float score to category based on binning
         df['pred'] = pd.cut(df['score'],
-                                 bins=5,
-                                 labels=[1, 2, 3, 4, 5])
+                            bins=5,
+                            labels=[1, 2, 3, 4, 5])
         df = df.drop('score', axis=1)
         return df
 
 
-class VaderSentiment(Utils):
+class VaderSentiment(Base):
     """Predict sentiment scores using Vader.
     Tested using nltk.sentiment.vader and Python 3.6+
     https://www.nltk.org/_modules/nltk/sentiment/vader.html
@@ -67,19 +66,18 @@ class VaderSentiment(Utils):
     def score(self, text: str) -> float:
         return self.vader.polarity_scores(text)['compound']
 
-    def predict(self, fname: str,
-                lower_case: bool) -> pd.DataFrame:
+    def predict(self, fname: str, lower_case: bool) -> pd.DataFrame:
         df = super().test_data(fname, lower_case)
         df['score'] = df['text'].apply(self.score)
         # Convert float score to category based on binning
         df['pred'] = pd.cut(df['score'],
-                                 bins=5,
-                                 labels=[1, 2, 3, 4, 5])
+                            bins=5,
+                            labels=[1, 2, 3, 4, 5])
         df = df.drop('score', axis=1)
         return df
 
 
-class FastTextSentiment(Utils):
+class FastTextSentiment(Base):
     """Predict sentiment scores using FastText.
     https://fasttext.cc/
     """
@@ -89,7 +87,8 @@ class FastTextSentiment(Utils):
         try:
             self.model = fastText.load_model(model_file)
         except ValueError:
-            raise Exception("Cannot find specified classifier model file: '{}'.".format(model_file))
+            raise Exception("Please specify a valid trained FastText model \
+                            file (.bin or .ftz extension)'{}'.".format(model_file))
 
     def score(self, text: str) -> float:
         # Predict just the top label (hence 1 index below)
@@ -97,14 +96,13 @@ class FastTextSentiment(Utils):
         pred = int(labels[0][-1])
         return pred
 
-    def predict(self, fname: str,
-                lower_case: bool) -> pd.DataFrame:
+    def predict(self, fname: str, lower_case: bool) -> pd.DataFrame:
         df = super().test_data(fname, lower_case)
         df['pred'] = df['text'].apply(self.score)
         return df
 
 
-class FlairSentiment(Utils):
+class FlairSentiment(Base):
     """Predict sentiment scores using Flair.
     https://github.com/zalandoresearch/flair
     Tested on Flair version 0.4.2+ and Python 3.6+
@@ -116,7 +114,8 @@ class FlairSentiment(Utils):
         try:
             self.model = TextClassifier.load(model_file)
         except ValueError:
-            raise Exception("Cannot find specified classifier model file: '{}'.".format(model_file))
+            raise Exception("Please specify a valid trained Flair PyTorch model \
+                            file (.pt extension)'{}'.".format(model_file))
 
     def score(self, text: str) -> float:
         from flair.data import Sentence
@@ -125,8 +124,7 @@ class FlairSentiment(Utils):
         pred = int(doc.labels[0].value)
         return pred
 
-    def predict(self, fname: str,
-                lower_case: bool) -> pd.DataFrame:
+    def predict(self, fname: str, lower_case: bool) -> pd.DataFrame:
         "Use tqdm to display model prediction status bar"
         # pip install tqdm
         from tqdm import tqdm
@@ -136,7 +134,7 @@ class FlairSentiment(Utils):
         return df
 
 
-def main(fname: str, method_class: Utils, model_file: str, lower_case: bool) -> None:
+def run(fname: str, method_class: Base, model_file: str, lower_case: bool) -> None:
     "Run sentiment classification based on specified method"
     result = method_class.predict(fname, lower_case)
     method_class.accuracy(result)
@@ -164,4 +162,4 @@ if __name__ == "__main__":
     lower_case = args.lower
     method_class = METHODS[args.method](model_file)   # Instantiate the implemented classifier class
 
-    main(fname, method_class, model_file, lower_case)
+    run(fname, method_class, model_file, lower_case)

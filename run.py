@@ -48,6 +48,7 @@ def run_classifier(fname: str,
     make_dirs("Plots")
     fig, ax = plot_confusion_matrix(result['truth'], result['pred'], normalize=True)
     ax.set_title("Normalized Confusion Matrix: {}".format(method.title()))
+    fig.tight_layout()
     fig.savefig("Plots/{}.png".format(method))
 
 

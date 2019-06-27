@@ -1,4 +1,3 @@
-import argparse
 import pandas as pd
 from sklearn.metrics import f1_score, accuracy_score
 
@@ -132,34 +131,3 @@ class FlairSentiment(Base):
         df = super().test_data(fname, lower_case)
         df['pred'] = df['text'].progress_apply(self.score)
         return df
-
-
-def run(fname: str, method_class: Base, model_file: str, lower_case: bool) -> None:
-    "Run sentiment classification based on specified method"
-    result = method_class.predict(fname, lower_case)
-    method_class.accuracy(result)
-
-
-if __name__ == "__main__":
-    # List of implemented sentiment classification methods
-    METHODS = {
-        'textblob': TextBlobSentiment,
-        'vader': VaderSentiment,
-        'fasttext': FastTextSentiment,
-        'flair': FlairSentiment,
-    }
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--test', type=str, help="Path (str) to test data file", default="data/sst/sst_test.txt")
-    parser.add_argument('--method', type=str, help="Sentiment classifier method", default="textblob")
-    parser.add_argument('--model', type=str, help="Path (str) to trained classifier model file", default="models/fasttext/sst.bin")
-    parser.add_argument('--lower', action="store_true", help="Flag to convert test data strings \
-                        to lower case (for lower-case trained classifiers)")
-    args = parser.parse_args()
-
-    fname = args.test   # Test file path (str)
-    model_file = args.model
-    lower_case = args.lower
-    method_class = METHODS[args.method](model_file)   # Instantiate the implemented classifier class
-
-    run(fname, method_class, model_file, lower_case)

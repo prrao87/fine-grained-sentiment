@@ -1,4 +1,4 @@
-# Fine Grained Sentiment Analysis: An Overview of Different Methods
+# Fine Grained Sentiment Classification
 This repo shows a comparison and discussion of various NLP methods to perform 5-class sentiment classification on the  [Stanford Sentiment Treebank](https://nlp.stanford.edu/sentiment/) (SST-5) dataset. To see the differences between the models and which classes they predict better or worse than one another, we train multiple types of rule-based, linear and neural network-based classifiers.
 
 Currently the following classifiers have been implemented:
@@ -22,9 +22,22 @@ For further development, simply activate the existing virtual environment.
     source venv/bin/activate
 
 
-## Run sentiment analysis and output confusion matrix plots
+## Training the Classifiers
+
+The training of the linear models (Logistic Regression and SVM) are done during runtime of the classifier (next step) since it requires very little tuning. To train the methods that rely on word/document embeddings, however, we use separate scripts to help more easily tune the hyperparameters. 
+
+To train the FastText model, run `train_fasttext.py`. The following hyper-parameters gave the best results for the SST-5 dataset.
+
+    python3 train_fasttext.py --lr 0.5 --epochs 100 --wordNgrams 3 --ws 7 --dim 100
+
+To train the Flair model, run `train_flair.py`. This model takes significantly longer to run on a GPU-enabled machine. After several hours of training for about 25 epochs, decent results were observed with the below options (ELMo embeddings were used on top of Flair embeddings).
+
+    python3 train_flair.py --lr 0.1 --epochs 25
+
+
+## Run sentiment analysis and output confusion matrix
  
-Run the file ```run_classifiers.py``` to perform 5-class sentiment classification. This file accepts arguments for multiple classifier models at a time (just space-separate the model names, all in lower case). The requested classification models are run on the test set, and confusion matrix plots are output (for each model) in the `./Plots/` directory.
+Once the classifiers have been trained on the SST-5 data, run the file ```run_classifiers.py``` to perform 5-class sentiment classification on the test set. This file accepts arguments for multiple classifier models at a time (just space-separate the model names, all in lower case). The requested classification models are run and evaluated on the test set and confusion matrix plots are output (for each model) in the `./Plots/` directory.
 
 An example using simple rule-based or scikit-learn models are shown below.
  

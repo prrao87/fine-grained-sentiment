@@ -9,7 +9,7 @@ class Base:
     def __init__(self) -> None:
         pass
 
-    def test_data(self, fname: str, lower_case: bool=False,
+    def read_data(self, fname: str, lower_case: bool=False,
                   colnames=['truth', 'text']) -> pd.DataFrame:
         "Read in test data into a Pandas DataFrame"
         df = pd.read_csv(fname, sep='\t', header=None, names=colnames)
@@ -40,8 +40,8 @@ class TextBlobSentiment(Base):
         from textblob import TextBlob
         return TextBlob(text).sentiment.polarity
 
-    def predict(self, fname: str, lower_case: bool) -> pd.DataFrame:
-        df = super().test_data(fname, lower_case)
+    def predict(self, train_file: None, test_file: str, lower_case: bool) -> pd.DataFrame:
+        df = super().read_data(test_file, lower_case)
         df['score'] = df['text'].apply(self.score)
         # Convert float score to category based on binning
         df['pred'] = pd.cut(df['score'],
@@ -65,8 +65,8 @@ class VaderSentiment(Base):
     def score(self, text: str) -> float:
         return self.vader.polarity_scores(text)['compound']
 
-    def predict(self, fname: str, lower_case: bool) -> pd.DataFrame:
-        df = super().test_data(fname, lower_case)
+    def predict(self, train_file: None, test_file: str, lower_case: bool) -> pd.DataFrame:
+        df = super().read_data(test_file, lower_case)
         df['score'] = df['text'].apply(self.score)
         # Convert float score to category based on binning
         df['pred'] = pd.cut(df['score'],
@@ -74,6 +74,67 @@ class VaderSentiment(Base):
                             labels=[1, 2, 3, 4, 5])
         df = df.drop('score', axis=1)
         return df
+
+
+class LogisticRegressionSentiment(Base):
+    """Predict sentiment scores using Logistic Regression.
+    Uses a sklearn pipeline.
+    """
+    def __init__(self, model_file: str=None) -> None:
+        # pip install sklearn
+        from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.pipeline import Pipeline
+        self.pipeline = Pipeline(
+            [
+                ('vect', CountVectorizer()),
+                ('tfidf', TfidfTransformer()),
+                ('clf', LogisticRegression(solver='liblinear', multi_class='auto')),
+            ]
+        )
+
+    def predict(self, train_file: str, test_file: str, lower_case: bool) -> pd.DataFrame:
+        "Train model using sklearn pipeline"
+        train_df = super().read_data(train_file, lower_case)
+        learner = self.pipeline.fit(train_df['text'], train_df['truth'])
+        # Fit the learner to the test data
+        test_df = super().read_data(test_file, lower_case)
+        test_df['pred'] = learner.predict(test_df['text'])
+        return test_df
+
+
+class SVMSentiment(Base):
+    """Predict sentiment scores using a linear Suppoer Vector Machine (SVM).
+    Uses a sklearn pipeline.
+    """
+    def __init__(self, model_file: str=None) -> None:
+        # pip install sklearn
+        from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+        from sklearn.linear_model import SGDClassifier
+        from sklearn.pipeline import Pipeline
+        self.pipeline = Pipeline(
+            [
+                ('vect', CountVectorizer()),
+                ('tfidf', TfidfTransformer()),
+                ('clf', SGDClassifier(
+                    loss='hinge',
+                    penalty='l2',
+                    alpha=1e-3,
+                    random_state=42,
+                    max_iter=5,
+                    tol=None,
+                )),
+            ]
+        )
+
+    def predict(self, train_file: str, test_file: str, lower_case: bool) -> pd.DataFrame:
+        "Train model using sklearn pipeline"
+        train_df = super().read_data(train_file, lower_case)
+        learner = self.pipeline.fit(train_df['text'], train_df['truth'])
+        # Fit the learner to the test data
+        test_df = super().read_data(test_file, lower_case)
+        test_df['pred'] = learner.predict(test_df['text'])
+        return test_df
 
 
 class FastTextSentiment(Base):
@@ -95,8 +156,8 @@ class FastTextSentiment(Base):
         pred = int(labels[0][-1])
         return pred
 
-    def predict(self, fname: str, lower_case: bool) -> pd.DataFrame:
-        df = super().test_data(fname, lower_case)
+    def predict(self, train_file: None, test_file: str, lower_case: bool) -> pd.DataFrame:
+        df = super().read_data(test_file, lower_case)
         df['pred'] = df['text'].apply(self.score)
         return df
 
@@ -123,11 +184,11 @@ class FlairSentiment(Base):
         pred = int(doc.labels[0].value)
         return pred
 
-    def predict(self, fname: str, lower_case: bool) -> pd.DataFrame:
+    def predict(self, train_file: None, test_file: str, lower_case: bool) -> pd.DataFrame:
         "Use tqdm to display model prediction status bar"
         # pip install tqdm
         from tqdm import tqdm
         tqdm.pandas()
-        df = super().test_data(fname, lower_case)
+        df = super().read_data(test_file, lower_case)
         df['pred'] = df['text'].progress_apply(self.score)
         return df

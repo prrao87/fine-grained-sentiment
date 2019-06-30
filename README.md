@@ -41,7 +41,7 @@ Once the classifiers have been trained on the SST-5 data, run the file ```run_cl
 
 An example using simple rule-based or scikit-learn models are shown below.
  
-    python3 run_classifiers.py --method textblob vader logistic vader
+    python3 run_classifiers.py --method textblob vader logistic svm
 
 This will run the TextBlob, Vader, Logistic Regression and Linear SVM sentiment models sequentially, and output their classification results. 
 

@@ -1,8 +1,9 @@
 pytreebank==0.2.6
-nltk==3.4.3
 tqdm==4.32.1
+cython==0.29.3
+pandas==0.23.4
+nltk==3.4.3
 fasttext==0.8.3
 textblob==0.15.3
-pandas==0.23.4
 flair==0.4.2
 allennlp==0.8.4

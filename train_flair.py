@@ -3,7 +3,10 @@ import argparse
 from typing import Tuple
 from pathlib import Path
 
-def flair_trainer(file_path: Path, filenames: Tuple[str, str, str], n_epochs: int=10) -> None:
+def trainer(file_path: Path,
+            filenames: Tuple[str, str, str],
+            n_epochs: int,
+            learning_rate: float) -> None:
     """Train sentiment model using Flair NLP library:
     https://github.com/zalandoresearch/flair/blob/master/resources/docs/TUTORIAL_7_TRAINING_A_MODEL.md
 
@@ -50,6 +53,7 @@ def flair_trainer(file_path: Path, filenames: Tuple[str, str, str], n_epochs: in
     trainer.train(
         file_path,
         EvaluationMetric.MACRO_F1_SCORE,
+        learning_rate=0.1,
         max_epochs=n_epochs,
         checkpoint=True
     )
@@ -64,12 +68,13 @@ if __name__ == "__main__":
     parser.add_argument('--filepath', type=str, help="Dataset path", default="data/sst")
     parser.add_argument('--train', type=str, help="Training set filename", default="sst_train.txt")
     parser.add_argument('--dev', type=str, help="Dev set filename", default="sst_dev.txt")
-    parser.add_argument('--test', type=str, help="Test set filename", default="sst_test.txt")
-    parser.add_argument('--epochs', type=int, help="Numbe of training epochs", default=10)
+    parser.add_argument('--test', type=str, help="Test/validation set filename", default="sst_test.txt")
+    parser.add_argument('--epochs', type=int, help="Number of epochs", default=10)
+    parser.add_argument('--lr', type=float, help="Starting learning rate", default=0.1)
 
     args = parser.parse_args()
 
     # Specify path and file names for train, dev and test data
     filepath = Path('./') / args.filepath
     filenames = (args.train, args.dev, args.test)
-    flair_trainer(filepath, filenames, n_epochs=args.epochs)
+    trainer(filepath, filenames, n_epochs=args.epochs, learning_rate=args.lr)

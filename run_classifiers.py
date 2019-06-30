@@ -69,14 +69,14 @@ if __name__ == "__main__":
     method_list = [method for method in METHODS.keys()]
     # Arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--train', type=str, help="Train data file (str)", default=TRAIN_PATH)
-    parser.add_argument('-d', '--dev', type=str, help="Dev data file (str)", default=DEV_PATH)
-    parser.add_argument('-v', '--val', type=str, help="Test/Validation data file (str)", default=TEST_PATH)
-    parser.add_argument('-m', '--method', type=str, nargs='+', help="Enter one or more methods \
+    parser.add_argument('--train', type=str, help="Train data file (str)", default=TRAIN_PATH)
+    parser.add_argument('--dev', type=str, help="Dev data file (str)", default=DEV_PATH)
+    parser.add_argument('--test', type=str, help="Test/Validation data file (str)", default=TEST_PATH)
+    parser.add_argument('--method', type=str, nargs='+', help="Enter one or more methods \
                         (Choose from following: {})".format(", ".join(method_list)),
                         required=True)
-    parser.add_argument('-f', '--model', type=str, help="Trained classifier model file (str)", default=None)
-    parser.add_argument('-l', '--lower', action="store_true", help="Flag to convert test data strings \
+    parser.add_argument('--model', type=str, help="Trained classifier model file (str)", default=None)
+    parser.add_argument('--lower', action="store_true", help="Flag to convert test data strings \
                         to lower case (for lower-case trained classifiers)")
     args = parser.parse_args()
 

@@ -143,9 +143,9 @@ class FastTextSentiment(Base):
     """
     def __init__(self, model_file: str=None) -> None:
         # pip install fasttext
-        import fastText
+        import fasttext
         try:
-            self.model = fastText.load_model(model_file)
+            self.model = fasttext.load_model(model_file)
         except ValueError:
             raise Exception("Please specify a valid trained FastText model \
                             file (.bin or .ftz extension)'{}'.".format(model_file))

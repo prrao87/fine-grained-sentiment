@@ -80,13 +80,16 @@ if __name__ == "__main__":
                         to lower case (for lower-case trained classifiers)")
     args = parser.parse_args()
 
-    files = (args.train, args.dev, args.val)   # Paths to train, dev and test files (str)
+    files = (args.train, args.dev, args.test)   # Paths to train, dev and test files (str)
     lower_case = args.lower
     for method in args.method:
         if method not in METHODS.keys():
             parser.error("Please choose from existing methods! {}".format(", ".join(method_list)))
         try:
-            model_file = METHODS[method]['model']
+            if args.model:
+                model_file = args.model
+            else:
+                model_file = METHODS[method]['model']
             # Instantiate the implemented classifier class
             method_class = METHODS[method]['class'](model_file)
         except KeyError:

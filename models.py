@@ -147,8 +147,8 @@ class FastTextSentiment(Base):
         try:
             self.model = fasttext.load_model(model_file)
         except ValueError:
-            raise Exception("Please specify a valid trained FastText model \
-                            file (.bin or .ftz extension)'{}'.".format(model_file))
+            raise Exception("Please specify a valid trained FastText model file (.bin or .ftz extension)'{}'."
+                            .format(model_file))
 
     def score(self, text: str) -> float:
         # Predict just the top label (hence 1 index below)
@@ -174,8 +174,8 @@ class FlairSentiment(Base):
         try:
             self.model = TextClassifier.load(model_file)
         except ValueError:
-            raise Exception("Please specify a valid trained Flair PyTorch model \
-                            file (.pt extension)'{}'.".format(model_file))
+            raise Exception("Please specify a valid trained Flair PyTorch model file (.pt extension)'{}'."
+                            .format(model_file))
 
     def score(self, text: str) -> float:
         from flair.data import Sentence

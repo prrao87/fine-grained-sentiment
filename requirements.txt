@@ -6,4 +6,4 @@ nltk==3.4.3
 textblob==0.15.3
 flair==0.4.2
 allennlp==0.8.4
-fasttext
+fasttext==0.9.1

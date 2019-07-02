@@ -5,20 +5,33 @@ from pathlib import Path
 
 def trainer(file_path: Path,
             filenames: Tuple[str, str, str],
-            n_epochs: int,
-            learning_rate: float) -> None:
+            stack: str,
+            n_epochs: int) -> None:
     """Train sentiment model using Flair NLP library:
     https://github.com/zalandoresearch/flair/blob/master/resources/docs/TUTORIAL_7_TRAINING_A_MODEL.md
 
-    To help provide added context, we stack ELMo embeddings along with Flair embeddings.
+    To help provide added context, we can stack Glove, Bert or ELMo embeddings along with Flair embeddings.
     """
     # pip install flair allennlp
     from flair.datasets import ClassificationCorpus
-    from flair.embeddings import FlairEmbeddings, DocumentRNNEmbeddings, ELMoEmbeddings
+    from flair.embeddings import FlairEmbeddings, DocumentRNNEmbeddings
     from flair.models import TextClassifier
     from flair.trainers import ModelTrainer
     from flair.training_utils import EvaluationMetric
     from flair.visual.training_curves import Plotter
+
+    if stack == "glove":
+        from flair.embeddings import WordEmbeddings
+        stacked_embedding = WordEmbeddings('glove')
+    elif stack == "elmo":
+        from flair.embeddings import ELMoEmbeddings
+        stacked_embedding = ELMoEmbeddings('original')
+    elif stack == "bert":
+        from flair.embeddings import BertEmbeddings
+        stacked_embedding = BertEmbeddings('bert-base-cased')
+    else:
+        stacked_embedding = None
+
     # Define and Load corpus from the provided dataset
     train, dev, test = filenames
     corpus = ClassificationCorpus(
@@ -29,12 +42,20 @@ def trainer(file_path: Path,
     )
     # Create label dictionary from provided labels in data
     label_dict = corpus.make_label_dictionary()
-    # Stack Flair string-embeddings with ELMo word-embeddings (requires AllenNLP installed)
-    word_embeddings = [
-        ELMoEmbeddings('original'),
-        FlairEmbeddings('news-forward'),
-        FlairEmbeddings('news-backward'),
-    ]
+
+    if not stacked_embedding:
+        # If nothing to stack, just use Flair embeddings
+        word_embeddings = [
+            FlairEmbeddings('news-forward'),
+            FlairEmbeddings('news-backward'),
+        ]
+    else:
+        # Stack Flair string-embeddings with optional embeddings
+        word_embeddings = [
+            stacked_embedding,
+            FlairEmbeddings('news-forward'),
+            FlairEmbeddings('news-backward'),
+        ]
     # Initialize document embedding by passing list of word embeddings
     document_embeddings = DocumentRNNEmbeddings(
         word_embeddings,
@@ -53,7 +74,6 @@ def trainer(file_path: Path,
     trainer.train(
         file_path,
         EvaluationMetric.MACRO_F1_SCORE,
-        learning_rate=0.1,
         max_epochs=n_epochs,
         checkpoint=True
     )
@@ -69,12 +89,15 @@ if __name__ == "__main__":
     parser.add_argument('--train', type=str, help="Training set filename", default="sst_train.txt")
     parser.add_argument('--dev', type=str, help="Dev set filename", default="sst_dev.txt")
     parser.add_argument('--test', type=str, help="Test/validation set filename", default="sst_test.txt")
+    parser.add_argument('--stack', type=str, help="Type of embeddings to stack along with Flair embeddings", default="glove")
     parser.add_argument('--epochs', type=int, help="Number of epochs", default=10)
-    parser.add_argument('--lr', type=float, help="Starting learning rate", default=0.1)
 
     args = parser.parse_args()
+
+    if args.stack not in ['glove', 'elmo', 'bert']:
+        parser.error("Please specify only one of glove, elmo or bert for stacked embeddings!")
 
     # Specify path and file names for train, dev and test data
     filepath = Path('./') / args.filepath
     filenames = (args.train, args.dev, args.test)
-    trainer(filepath, filenames, n_epochs=args.epochs, learning_rate=args.lr)
+    trainer(filepath, filenames, stack=args.stack, n_epochs=args.epochs)

@@ -5,6 +5,7 @@ from pathlib import Path
 
 def trainer(file_path: Path,
             filenames: Tuple[str, str, str],
+            checkpoint: str,
             stack: str,
             n_epochs: int) -> None:
     """Train sentiment model using Flair NLP library:
@@ -69,7 +70,14 @@ def trainer(file_path: Path,
         label_dictionary=label_dict,
         multi_label=False
     )
-    trainer = ModelTrainer(classifier, corpus)
+
+    if not checkpoint:
+        trainer = ModelTrainer(classifier, corpus)
+    else:
+        # If checkpoint file is defined, resume training
+        checkpoint = classifier.load_from_checkpoint(Path(checkpoint))
+        trainer = ModelTrainer.load_from_checkpoint(checkpoint, corpus)
+
     # Begin training (enable checkpointing to continue training at a later time, if desired)
     trainer.train(
         file_path,
@@ -77,6 +85,7 @@ def trainer(file_path: Path,
         max_epochs=n_epochs,
         checkpoint=True
     )
+
     # Plot curves and store weights and losses
     plotter = Plotter()
     plotter.plot_training_curves(file_path / 'loss.tsv')
@@ -90,7 +99,8 @@ if __name__ == "__main__":
     parser.add_argument('--dev', type=str, help="Dev set filename", default="sst_dev.txt")
     parser.add_argument('--test', type=str, help="Test/validation set filename", default="sst_test.txt")
     parser.add_argument('--stack', type=str, help="Type of embeddings to stack along with Flair embeddings", default="glove")
-    parser.add_argument('--epochs', type=int, help="Number of epochs", default=10)
+    parser.add_argument('--epochs', type=int, help="Number of epochs", default=25)
+    parser.add_argument('--checkpoint', type=str, help="Path of checkpoint file (to restart training)", default=None)
 
     args = parser.parse_args()
 
@@ -100,4 +110,4 @@ if __name__ == "__main__":
     # Specify path and file names for train, dev and test data
     filepath = Path('./') / args.filepath
     filenames = (args.train, args.dev, args.test)
-    trainer(filepath, filenames, stack=args.stack, n_epochs=args.epochs)
+    trainer(filepath, filenames, args.checkpoint, stack=args.stack, n_epochs=args.epochs)

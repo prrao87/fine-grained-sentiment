@@ -75,7 +75,7 @@ def trainer(file_path: Path,
         trainer = ModelTrainer(classifier, corpus)
     else:
         # If checkpoint file is defined, resume training
-        checkpoint = classifier.load_from_checkpoint(Path(checkpoint))
+        checkpoint = classifier.load_checkpoint(Path(checkpoint))
         trainer = ModelTrainer.load_from_checkpoint(checkpoint, corpus)
 
     # Begin training (enable checkpointing to continue training at a later time, if desired)

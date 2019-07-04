@@ -1,5 +1,5 @@
 # Fine Grained Sentiment Classification
-This repo shows a comparison and discussion of various NLP methods to perform 5-class sentiment classification on the  [Stanford Sentiment Treebank](https://nlp.stanford.edu/sentiment/) (SST-5) dataset. To see the differences between the models and which classes they predict better or worse than one another, we train multiple types of rule-based, linear and neural network-based classifiers.
+This repo shows a comparison and discussion of various NLP methods to perform 5-class sentiment classification on the  [Stanford Sentiment Treebank](https://nlp.stanford.edu/sentiment/) (SST-5) dataset. To see the differences between the methods and in which way they differ from one another, we predict classes with multiple rule-based, linear and neural network-based classifiers.
 
 Currently the following classifiers have been implemented:
  - **TextBlob**: Rule-based, uses the internal `polarity` metric from the [TextBlob](https://textblob.readthedocs.io/en/dev/) library.

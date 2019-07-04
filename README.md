@@ -30,9 +30,17 @@ To train the FastText model, run `train_fasttext.py`. The following hyper-parame
 
     python3 train_fasttext.py --lr 0.5 --epochs 100 --wordNgrams 3 --ws 7 --dim 100
 
-To train the Flair model, run `train_flair.py`. This model takes significantly longer to run on a GPU-enabled machine. After several hours of training for about 25 epochs, decent results were observed with the below options (ELMo embeddings were used on top of Flair embeddings).
+To train the Flair model, run `train_flair.py`. To enhance the model's context, we can stack word embeddings (either GloVe, ELMo or Bert) with Flair's string embeddings. This model takes significantly longer to run on a GPU-enabled machine (of the order of several hours).
 
-    python3 train_flair.py --lr 0.1 --epochs 25
+The below examples show how to train Flair models with stacked word/string embeddings using the provided script. Specifying the `--stack` argument will invoke either GloVe, ELMo (original) or Bert (Base, cased) word embeddings along with Flair forward/backward string embeddings to train the classifier. 
+
+    python3 train_flair.py --stack glove --epochs 25
+    python3 train_flair.py --stack bert --epochs 25
+    python3 train_flair.py --stack elmo --epochs 25
+
+To resume training from a checkpoint, just pass in the path to the checkpoint file.
+
+    python3 train_flair.py --stack glove --checkpoint models/flair/bert/checkpoint.pt --epochs 25
 
 
 ## Run sentiment analysis and output confusion matrix
@@ -70,7 +78,7 @@ The method class and classifier model specification can be done using the dictio
 
 The above dictionary makes it easier to update the framework with more models and methods over time - simply update the method name and its class names and models files as shown above. 
 
-To run a single case just pass one method as an argument
+To run a single case just pass one method as an argument:
  
     python3 run_classifiers.py --method textblob
 

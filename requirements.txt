@@ -7,3 +7,4 @@ textblob==0.15.3
 pytorch_pretrained_bert==0.6.2
 flair==0.4.2    # If not using flair, remove this line
 fasttext==0.9.1
+lime==0.1.1.36

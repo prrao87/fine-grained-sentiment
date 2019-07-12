@@ -17,6 +17,8 @@ def fasttext_pred_formatted(model_file, text):
     classifier = fasttext.load_model(model_file)
     labels, probs = classifier.predict(text, 5)
 
+
+    print(labels, probs)
     # For each prediction, sort the probability scores in the same order for all texts
     # (fasttext by default returns predictions in the most likely order for each text)
     result = []
@@ -40,13 +42,14 @@ def flair_pred_formatted(model_file, text):
     model.predict(doc, multi_class_prob=True)
 
     labels = [x.value for x in doc.labels]
-    probs = [x.score for x in doc.labels]
+    probs = np.array([x.score for x in doc.labels])
 
     # For each prediction, sort the probability scores in the same order for all texts
     # (flair by default returns predictions in the most likely order for each text)
     result = []
     for label, prob, txt in zip(labels, probs, text):
         order = np.argsort(np.array(label))
+        print(order)
         result.append(prob[order])
 
     return np.array(result)
@@ -56,6 +59,10 @@ if __name__ == "__main__":
     # Example string
     sample = "The story loses its bite in a last-minute happy ending that 's even less plausible than the rest of the picture ."
 
+    # res = flair_pred_formatted('models/flair/best-model-elmo.pt', sample)
+    res = fasttext_pred_formatted('models/fasttext/sst.bin', sample)
+    print(res)
+    """
     # Create a LimeTextExplainer
     explainer = lime.lime_text.LimeTextExplainer(
         # Specify split option
@@ -80,4 +87,5 @@ if __name__ == "__main__":
     exp.save_to_file(output_filename)
 
     # Open the explanation html in our web browser.
-    webbrowser.open(output_filename.as_uri())
+    # webbrowser.open(output_filename.as_uri())
+    """

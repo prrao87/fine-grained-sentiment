@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument('--model', type=str, help="Trained model output name", default="sst.bin")
     parser.add_argument('--epochs', type=int, help="Number of epochs", default=100)
     parser.add_argument('--lr', type=float, help="Learning rate", default=0.5)
-    parser.add_argument('--ws', type=int, help="Size of the context window", default=7)
+    parser.add_argument('--ws', type=int, help="Size of the context window", default=3)
     parser.add_argument('--wordNgrams', type=int, help="Max length of word ngram", default=3)
     parser.add_argument('--dim', type=int, help="Size of the word vectors", default=100)
 

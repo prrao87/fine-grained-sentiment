@@ -1,7 +1,6 @@
 import argparse
 import lime.lime_text
 import numpy as np
-import webbrowser
 from pathlib import Path
 
 
@@ -25,34 +24,37 @@ def load_flair(path_to_model):
     return classifier
 
 
-def fasttext_predictor(classifier, text):
+def fasttext_predictor(classifier, texts):
     """Generate an array of predicted labels/scores using FastText
     """
-    labels, probs = classifier.predict(text, 5)
+    labels, probs = classifier.predict(texts, 5)
 
     # For each prediction, sort the probability scores in the same order for all texts
     result = []
-    for label, prob, txt in zip(labels, probs, text):
+    for label, prob, text in zip(labels, probs, texts):
         order = np.argsort(np.array(label))
         result.append(prob[order])
 
     return np.array(result)
 
 
-def flair_predictor(classifier, text):
+def flair_predictor(classifier, texts):
     """Generate an array of predicted labels/scores using the Flair NLP library
     """
     from flair.data import Sentence
     # Make prediction and sort probabilities
-    doc = Sentence(text)
-    classifier.predict(doc, multi_class_prob=True)
-
-    labels = [x.value for x in doc.labels]
-    probs = np.array([x.score for x in doc.labels])
+    labels = []
+    probs = []
+    for text in texts:
+        doc = Sentence(text)
+        classifier.predict(doc, multi_class_prob=True)
+        labels.append([x.value for x in doc.labels])
+        probs.append([x.score for x in doc.labels])
+    probs = np.array(probs)   # Convert probabilities to Numpy array
 
     # For each prediction, sort the probability scores in the same order for all texts
     result = []
-    for label, prob, txt in zip(labels, probs, text):
+    for label, prob, text in zip(labels, probs, texts):
         order = np.argsort(np.array(label))
         result.append(prob[order])
 
@@ -118,5 +120,5 @@ if __name__ == "__main__":
             # Output to HTML
             output_filename = Path(__file__).parent / "explanation-{}.html".format(method)
             exp.save_to_file(output_filename)
-        except ValueError:
-            raise Exception("Could not find classifier model file for {}".format(method))
+        except Exception as e:
+            print(e)

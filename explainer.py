@@ -98,7 +98,10 @@ def main(method, path_to_model, text):
 if __name__ == "__main__":
 
     # Example string
-    sample = "It 's not horrible , just horribly mediocre ."
+    samples = [
+        "It 's not horrible , just horribly mediocre .",
+        "Light , cute and forgettable .",
+    ]
 
     # Get list of available methods:
     method_list = [method for method in METHODS.keys()]
@@ -116,10 +119,12 @@ if __name__ == "__main__":
         try:
             path_to_model = METHODS[method]
             # Run explainer function
-            exp = main(method, path_to_model, sample)
+            for i, text in enumerate(samples):
+                exp = main(method, path_to_model, text)
 
-            # Output to HTML
-            output_filename = Path(__file__).parent / "explanation-{}.html".format(method)
-            exp.save_to_file(output_filename)
+                # Output to HTML
+                output_filename = Path(__file__).parent / "{}-explanation-{}.html".format(i, method)
+                exp.save_to_file(output_filename)
+                print("Output explainer data {} to HTML".format(i+1))
         except Exception as e:
             print(e)

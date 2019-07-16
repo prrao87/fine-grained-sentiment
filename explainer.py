@@ -2,6 +2,7 @@ import argparse
 import lime.lime_text
 import numpy as np
 from pathlib import Path
+from tqdm import tqdm
 
 
 METHODS = {
@@ -42,10 +43,10 @@ def flair_predictor(classifier, texts):
     """Generate an array of predicted labels/scores using the Flair NLP library
     """
     from flair.data import Sentence
-    # Make prediction and sort probabilities
     labels = []
     probs = []
-    for text in texts:
+    for text in tqdm(texts):
+        # Iterate through text list and make predictions
         doc = Sentence(text)
         classifier.predict(doc, multi_class_prob=True)
         labels.append([x.value for x in doc.labels])
@@ -71,7 +72,7 @@ def main(method, path_to_model, text):
         classifier = load_flair(path_to_model)
         predictor = flair_predictor
     else:
-        raise Exception("Requested method {} explainer funtction not implemented!")
+        raise Exception("Requested method {} explainer function not implemented!")
 
     # Create a LimeTextExplainer
     explainer = lime.lime_text.LimeTextExplainer(
@@ -111,7 +112,7 @@ if __name__ == "__main__":
 
     for method in args.method:
         if method not in METHODS.keys():
-            parser.error("Please choose from existing methods! {}".format(", ".join(method_list)))
+            parser.error("Please choose from the below existing methods! \n{}".format(", ".join(method_list)))
         try:
             path_to_model = METHODS[method]
             # Run explainer function

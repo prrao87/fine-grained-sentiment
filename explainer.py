@@ -1,15 +1,42 @@
 import argparse
-from typing import List, Any
-import lime.lime_text
 import numpy as np
+import pandas as pd
 from pathlib import Path
+from typing import List, Any
+from lime.lime_text import LimeTextExplainer
 from tqdm import tqdm
 
+## @TODO: Clean up code structure and make it more modular
 
 METHODS = {
+    'logistic': "data/sst/sst_train.txt",
     'fasttext': "models/fasttext/sst.bin",
     'flair': "models/flair/best-model-elmo.pt"
 }
+
+
+def load_logistic(path_to_train_data: str) -> Any:
+    "Train a logistic regression classifier"
+    # Read in and transform trainind data
+    train_df = pd.read_csv(path_to_train_data, sep='\t', header=None, names=["truth", "text"])
+    train_df['truth'] = train_df['truth'].str.replace('__label__', '')
+    # Categorical data type for truth labels
+    train_df['truth'] = train_df['truth'].astype(int).astype('category')
+
+    # Create sklearn logistic regression model pipeline
+    from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import Pipeline
+    pipeline = Pipeline(
+        [
+            ('vect', CountVectorizer()),
+            ('tfidf', TfidfTransformer()),
+            ('clf', LogisticRegression(solver='liblinear', multi_class='auto')),
+        ]
+    )
+    # Train model
+    learner = pipeline.fit(train_df['text'], train_df['truth'])
+    return learner
 
 
 def load_fasttext(path_to_model: str) -> Any:
@@ -24,6 +51,13 @@ def load_flair(path_to_model: str) -> Any:
     from flair.models import TextClassifier
     classifier = TextClassifier.load(path_to_model)
     return classifier
+
+
+def logistic_predictor(classifier: Any, texts: List[str]) -> np.array:
+    """Generate an array of predicted scores (probabilities) from sklearn
+    Logistic Regression Pipeline."""
+    probs = classifier.predict_proba(texts)
+    return probs
 
 
 def fasttext_predictor(classifier: Any, texts: List[str]) -> np.array:
@@ -64,21 +98,24 @@ def flair_predictor(classifier: Any, texts: List[str]) -> np.array:
 
 
 def main(method: str,
-         path_to_model: str,
-         text: str) -> lime.lime_text.LimeTextExplainer:
+         path_to_file: str,
+         text: str) -> LimeTextExplainer:
     """Run LIME explainer on provided classifier
     """
-    if method == "fasttext":
-        classifier = load_fasttext(path_to_model)
+    if method == "logistic":
+        classifier = load_logistic(path_to_file)
+        predictor = logistic_predictor
+    elif method == "fasttext":
+        classifier = load_fasttext(path_to_file)
         predictor = fasttext_predictor
     elif method == "flair":
-        classifier = load_flair(path_to_model)
+        classifier = load_flair(path_to_file)
         predictor = flair_predictor
     else:
         raise Exception("Requested method {} explainer function not implemented!")
 
     # Create a LimeTextExplainer
-    explainer = lime.lime_text.LimeTextExplainer(
+    explainer = LimeTextExplainer(
         # Specify split option
         split_expression=lambda x: x.split(),
         # Our classifer uses bigrams or contextual ordering to classify text
@@ -99,8 +136,7 @@ def main(method: str,
 
 
 if __name__ == "__main__":
-
-    # Example string
+    # Evaluation text
     samples = [
         "It 's not horrible , just horribly mediocre .",
         "Light , cute and forgettable .",
@@ -120,10 +156,10 @@ if __name__ == "__main__":
         if method not in METHODS.keys():
             parser.error("Please choose from the below existing methods! \n{}".format(", ".join(method_list)))
         try:
-            path_to_model = METHODS[method]
+            path_to_file = METHODS[method]
             # Run explainer function
             for i, text in enumerate(samples):
-                exp = main(method, path_to_model, text)
+                exp = main(method, path_to_file, text)
 
                 # Output to HTML
                 output_filename = Path(__file__).parent / "{}-explanation-{}.html".format(i, method)

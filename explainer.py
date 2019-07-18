@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import sklearn.pipeline
 from pathlib import Path
-from typing import List, Any
+from typing import List
 from lime.lime_text import LimeTextExplainer
 from tqdm import tqdm
 
@@ -158,7 +158,7 @@ if __name__ == "__main__":
                 exp = main(method, path_to_file, text)
 
                 # Output to HTML
-                output_filename = Path(__file__).parent / "{}-explanation-{}.html".format(i, method)
+                output_filename = Path(__file__).parent / "{}-explanation-{}.html".format(i+1, method)
                 exp.save_to_file(output_filename)
                 print("Output explainer data {} to HTML".format(i+1))
         except Exception as e:

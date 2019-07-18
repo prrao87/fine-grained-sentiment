@@ -1,4 +1,5 @@
 import argparse
+from typing import List, Any
 import lime.lime_text
 import numpy as np
 from pathlib import Path
@@ -11,21 +12,21 @@ METHODS = {
 }
 
 
-def load_fasttext(path_to_model):
+def load_fasttext(path_to_model: str) -> Any:
     "Load FastText classifier"
     import fasttext
     classifier = fasttext.load_model(path_to_model)
     return classifier
 
 
-def load_flair(path_to_model):
+def load_flair(path_to_model: str) -> Any:
     "Load Flair classifier"
     from flair.models import TextClassifier
     classifier = TextClassifier.load(path_to_model)
     return classifier
 
 
-def fasttext_predictor(classifier, texts):
+def fasttext_predictor(classifier: Any, texts: List[str]) -> np.array:
     """Generate an array of predicted labels/scores using FastText
     """
     labels, probs = classifier.predict(texts, 5)
@@ -39,7 +40,7 @@ def fasttext_predictor(classifier, texts):
     return np.array(result)
 
 
-def flair_predictor(classifier, texts):
+def flair_predictor(classifier: Any, texts: List[str]) -> np.array:
     """Generate an array of predicted labels/scores using the Flair NLP library
     """
     from flair.data import Sentence
@@ -62,7 +63,9 @@ def flair_predictor(classifier, texts):
     return np.array(result)
 
 
-def main(method, path_to_model, text):
+def main(method: str,
+         path_to_model: str,
+         text: str) -> lime.lime_text.LimeTextExplainer:
     """Run LIME explainer on provided classifier
     """
     if method == "fasttext":

@@ -1,12 +1,10 @@
 import argparse
 import numpy as np
-import pandas as pd
+import sklearn.pipeline
 from pathlib import Path
 from typing import List, Any
 from lime.lime_text import LimeTextExplainer
 from tqdm import tqdm
-
-## @TODO: Clean up code structure and make it more modular
 
 METHODS = {
     'logistic': "data/sst/sst_train.txt",
@@ -15,102 +13,100 @@ METHODS = {
 }
 
 
-def load_logistic(path_to_train_data: str) -> Any:
-    "Train a logistic regression classifier"
-    # Read in and transform trainind data
-    train_df = pd.read_csv(path_to_train_data, sep='\t', header=None, names=["truth", "text"])
-    train_df['truth'] = train_df['truth'].str.replace('__label__', '')
-    # Categorical data type for truth labels
-    train_df['truth'] = train_df['truth'].astype(int).astype('category')
+class LogisticExplainer:
+    """Class to explain classification results of a scikit-learn 
+    Logistic Regression Pipeline. The model is trained within this class."""
+    def __init__(self, path_to_train_data: str) -> None:
+        import pandas as pd
+        # Read in training data set
+        self.train_df = pd.read_csv(path_to_train_data, sep='\t', header=None, names=["truth", "text"])
+        self.train_df['truth'] = self.train_df['truth'].str.replace('__label__', '')
+        # Categorical data type for truth labels
+        self.train_df['truth'] = self.train_df['truth'].astype(int).astype('category')
 
-    # Create sklearn logistic regression model pipeline
-    from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.pipeline import Pipeline
-    pipeline = Pipeline(
-        [
-            ('vect', CountVectorizer()),
-            ('tfidf', TfidfTransformer()),
-            ('clf', LogisticRegression(solver='liblinear', multi_class='auto')),
-        ]
-    )
-    # Train model
-    learner = pipeline.fit(train_df['text'], train_df['truth'])
-    return learner
+    def train(self) -> sklearn.pipeline.Pipeline:
+        "Create sklearn logistic regression model pipeline"
+        from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.pipeline import Pipeline
+        pipeline = Pipeline(
+            [
+                ('vect', CountVectorizer()),
+                ('tfidf', TfidfTransformer()),
+                ('clf', LogisticRegression(solver='liblinear', multi_class='auto')),
+            ]
+        )
+        # Train model
+        classifier = pipeline.fit(self.train_df['text'], self.train_df['truth'])
+        return classifier
 
-
-def load_fasttext(path_to_model: str) -> Any:
-    "Load FastText classifier"
-    import fasttext
-    classifier = fasttext.load_model(path_to_model)
-    return classifier
-
-
-def load_flair(path_to_model: str) -> Any:
-    "Load Flair classifier"
-    from flair.models import TextClassifier
-    classifier = TextClassifier.load(path_to_model)
-    return classifier
+    def predict(self, texts: List[str]) -> np.array:
+        """Generate an array of predicted scores (probabilities) from sklearn
+        Logistic Regression Pipeline."""
+        classifier = self.train()
+        probs = classifier.predict_proba(texts)
+        return probs
 
 
-def logistic_predictor(classifier: Any, texts: List[str]) -> np.array:
-    """Generate an array of predicted scores (probabilities) from sklearn
-    Logistic Regression Pipeline."""
-    probs = classifier.predict_proba(texts)
-    return probs
+class FastTextExplainer:
+    """Class to explain classification results of FastText.
+    Assumes that we already have a trained FastText model with which to make predictions."""
+    def __init__(self, path_to_model: str) -> None:
+        import fasttext
+        self.classifier = fasttext.load_model(path_to_model)
+
+    def predict(self, texts: List[str]) -> np.array:
+        "Generate an array of predicted scores using the FastText"
+        labels, probs = self.classifier.predict(texts, 5)
+        
+        # For each prediction, sort the probability scores in the same order for all texts
+        result = []
+        for label, prob, text in zip(labels, probs, texts):
+            order = np.argsort(np.array(label))
+            result.append(prob[order])
+        return np.array(result)
 
 
-def fasttext_predictor(classifier: Any, texts: List[str]) -> np.array:
-    """Generate an array of predicted labels/scores using FastText
-    """
-    labels, probs = classifier.predict(texts, 5)
+class FlairExplainer:
+    """Class to explain classification results of Flair.
+    Assumes that we already have a trained Flair model with which to make predictions."""
+    def __init__(self, path_to_model: str) -> None:
+        from flair.models import TextClassifier
+        self.classifier = TextClassifier.load(path_to_model)
 
-    # For each prediction, sort the probability scores in the same order for all texts
-    result = []
-    for label, prob, text in zip(labels, probs, texts):
-        order = np.argsort(np.array(label))
-        result.append(prob[order])
+    def predict(self, texts: List[str]) -> np.array:
+        "Generate an array of predicted scores using the Flair NLP library"
+        from flair.data import Sentence
+        labels, probs = [], []
+        for text in tqdm(texts):
+            # Iterate through text list and make predictions
+            doc = Sentence(text)
+            self.classifier.predict(doc, multi_class_prob=True)
+            labels.append([x.value for x in doc.labels])
+            probs.append([x.score for x in doc.labels])
+        probs = np.array(probs)   # Convert probabilities to Numpy array
 
-    return np.array(result)
-
-
-def flair_predictor(classifier: Any, texts: List[str]) -> np.array:
-    """Generate an array of predicted labels/scores using the Flair NLP library
-    """
-    from flair.data import Sentence
-    labels = []
-    probs = []
-    for text in tqdm(texts):
-        # Iterate through text list and make predictions
-        doc = Sentence(text)
-        classifier.predict(doc, multi_class_prob=True)
-        labels.append([x.value for x in doc.labels])
-        probs.append([x.score for x in doc.labels])
-    probs = np.array(probs)   # Convert probabilities to Numpy array
-
-    # For each prediction, sort the probability scores in the same order for all texts
-    result = []
-    for label, prob, text in zip(labels, probs, texts):
-        order = np.argsort(np.array(label))
-        result.append(prob[order])
-
-    return np.array(result)
+        # For each prediction, sort the probability scores in the same order for all texts
+        result = []
+        for label, prob, text in zip(labels, probs, texts):
+            order = np.argsort(np.array(label))
+            result.append(prob[order])
+        return np.array(result)
 
 
 def main(method: str,
          path_to_file: str,
          text: str) -> LimeTextExplainer:
-    """Run LIME explainer on provided classifier
-    """
+    """Run LIME explainer on provided classifier"""
     if method == "logistic":
-        classifier = load_logistic(path_to_file)
-        predictor = logistic_predictor
+        model = LogisticExplainer(path_to_file)
+        predictor = model.predict
     elif method == "fasttext":
-        classifier = load_fasttext(path_to_file)
-        predictor = fasttext_predictor
+        model = FastTextExplainer(path_to_file)
+        predictor = model.predict
     elif method == "flair":
-        classifier = load_flair(path_to_file)
-        predictor = flair_predictor
+        model = FlairExplainer(path_to_file)
+        predictor = model.predict
     else:
         raise Exception("Requested method {} explainer function not implemented!")
 
@@ -128,7 +124,7 @@ def main(method: str,
     # Make a prediction and explain it:
     exp = explainer.explain_instance(
         text,
-        classifier_fn=lambda x: predictor(classifier, x),
+        classifier_fn=predictor,
         top_labels=1,
         num_features=10,
     )

@@ -51,28 +51,28 @@ The method class and classifier model specification can be done using the dictio
 
     METHODS = {
         'textblob': {
-            'class': TextBlobSentiment,
+            'class': "TextBlobSentiment",
             'model': None
         },
         'vader': {
-            'class': VaderSentiment,
+            'class': "VaderSentiment",
             'model': None
         },
         'logistic': {
-            'class': LogisticRegressionSentiment,
+            'class': "LogisticRegressionSentiment",
             'model': None
         },
         'svm': {
-            'class': SVMSentiment,
+            'class': "SVMSentiment",
             'model': None
         },
         'fasttext': {
-            'class': FastTextSentiment,
+            'class': "FastTextSentiment",
             'model': "models/fasttext/sst.bin"
         },
         'flair': {
-            'class': FlairSentiment,
-            'model': "models/flair/best-model.pt"
+            'class': "FlairSentiment",
+            'model': "models/flair/best-model-elmo.pt"
         },
     }
 
@@ -96,5 +96,36 @@ OR
     python3 run_classifiers.py --method flair --model models/flair/best-model-elmo.pt
     python3 run_classifiers.py --method flair --model models/flair/best-model-glove.pt
 
+## Explain classifier results
 
+Once a sentiment model has been trained, we can use it to explain the classifier's predictions. To do this we make use of the [LIME library](https://github.com/marcotcr/lime). The LIME method generates a local linear approximation of the model (regardless of whether the model is *globally* nonlinear or not), and then perturbs this local model to identify features that influence the classification results the most. For multi-class cases such as this one, LIME produces a list of probabilities for each class, and also highlights the effect of each token feature's on the predicted class using a [one-vs-rest method](https://en.wikipedia.org/wiki/Multiclass_classification#One-vs.-rest).
 
+A method dictionary is specified as before, this time for the explainer class (ins `explainer.py`). This dictionary makes it easier to update the explainer framework with more methods over time - simply update the method name and its class names and models files as shown above. 
+
+    METHODS = {
+        'logistic': {
+            'class': "LogisticExplainer",
+            'file': "data/sst/sst_train.txt"
+        },
+        'fasttext': {
+            'class': "FastTextExplainer",
+            'file': "models/fasttext/sst.bin"
+        },
+        'flair': {
+            'class': "FlairExplainer",
+            'file': "models/flair/best-model-elmo.pt"
+        },
+    }
+
+ Define a few sample sentences (as a list in `explainer.py`) from the SST-5 test data.
+
+    samples = [
+        "It 's not horrible , just horribly mediocre .",
+        "Light , cute and forgettable .",
+    ]
+
+Run the explainer on each, or all of methods as follows:
+
+    python3 explainer.py --method logistic fasttext flair
+
+This outputs HTML files with embeds showing the explanations for each sample sentence.

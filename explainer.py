@@ -167,4 +167,4 @@ if __name__ == "__main__":
             # Output to HTML
             output_filename = Path(__file__).parent / "{}-explanation-{}.html".format(i+1, method)
             exp.save_to_file(output_filename)
-            print("Output explainer data {} to HTML".format(i+1))
+            print("{}: Output explainer data {} to HTML".format(method.upper(), i+1))

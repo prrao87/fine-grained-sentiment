@@ -2,15 +2,31 @@ import argparse
 import numpy as np
 import sklearn.pipeline
 from pathlib import Path
-from typing import List
+from typing import List, Any
 from lime.lime_text import LimeTextExplainer
 from tqdm import tqdm
 
 METHODS = {
-    'logistic': "data/sst/sst_train.txt",
-    'fasttext': "models/fasttext/sst.bin",
-    'flair': "models/flair/best-model-elmo.pt"
+    'logistic': {
+        'class': "LogisticExplainer",
+        'file': "data/sst/sst_train.txt"
+    },
+    'fasttext': {
+        'class': "FastTextExplainer",
+        'file': "models/fasttext/sst.bin"
+    },
+    'flair': {
+        'class': "FlairExplainer",
+        'file': "models/flair/best-model-elmo.pt"
+    },
 }
+
+
+def explainer_class(method: str, filename: str) -> Any:
+    "Instantiate class using its string name"
+    classname = METHODS[method]['class']
+    class_ = globals()[classname]
+    return class_(filename)
 
 
 class LogisticExplainer:
@@ -58,7 +74,7 @@ class FastTextExplainer:
     def predict(self, texts: List[str]) -> np.array:
         "Generate an array of predicted scores using the FastText"
         labels, probs = self.classifier.predict(texts, 5)
-        
+
         # For each prediction, sort the probability scores in the same order for all texts
         result = []
         for label, prob, text in zip(labels, probs, texts):
@@ -98,17 +114,9 @@ def main(method: str,
          path_to_file: str,
          text: str) -> LimeTextExplainer:
     """Run LIME explainer on provided classifier"""
-    if method == "logistic":
-        model = LogisticExplainer(path_to_file)
-        predictor = model.predict
-    elif method == "fasttext":
-        model = FastTextExplainer(path_to_file)
-        predictor = model.predict
-    elif method == "flair":
-        model = FlairExplainer(path_to_file)
-        predictor = model.predict
-    else:
-        raise Exception("Requested method {} explainer function not implemented!")
+
+    model = explainer_class(method, path_to_file)
+    predictor = model.predict
 
     # Create a LimeTextExplainer
     explainer = LimeTextExplainer(
@@ -151,15 +159,12 @@ if __name__ == "__main__":
     for method in args.method:
         if method not in METHODS.keys():
             parser.error("Please choose from the below existing methods! \n{}".format(", ".join(method_list)))
-        try:
-            path_to_file = METHODS[method]
-            # Run explainer function
-            for i, text in enumerate(samples):
-                exp = main(method, path_to_file, text)
+        path_to_file = METHODS[method]['file']
+        # Run explainer function
+        for i, text in enumerate(samples):
+            exp = main(method, path_to_file, text)
 
-                # Output to HTML
-                output_filename = Path(__file__).parent / "{}-explanation-{}.html".format(i+1, method)
-                exp.save_to_file(output_filename)
-                print("Output explainer data {} to HTML".format(i+1))
-        except Exception as e:
-            print(e)
+            # Output to HTML
+            output_filename = Path(__file__).parent / "{}-explanation-{}.html".format(i+1, method)
+            exp.save_to_file(output_filename)
+            print("Output explainer data {} to HTML".format(i+1))

@@ -3,7 +3,7 @@ Run fine-grained sentiment classifier based on chosen method
 """
 import argparse
 import os
-from typing import Tuple
+from typing import Tuple, Any
 from plot_utils import plot_confusion_matrix
 from models import *
 
@@ -15,30 +15,37 @@ TEST_PATH = "data/sst/sst_test.txt"
 # List of currently implemented sentiment classification methods
 METHODS = {
     'textblob': {
-        'class': TextBlobSentiment,
+        'class': "TextBlobSentiment",
         'model': None
     },
     'vader': {
-        'class': VaderSentiment,
+        'class': "VaderSentiment",
         'model': None
     },
     'logistic': {
-        'class': LogisticRegressionSentiment,
+        'class': "LogisticRegressionSentiment",
         'model': None
     },
     'svm': {
-        'class': SVMSentiment,
+        'class': "SVMSentiment",
         'model': None
     },
     'fasttext': {
-        'class': FastTextSentiment,
+        'class': "FastTextSentiment",
         'model': "models/fasttext/sst.bin"
     },
     'flair': {
-        'class': FlairSentiment,
+        'class': "FlairSentiment",
         'model': "models/flair/best-model.pt"
     },
 }
+
+
+def get_class(method: str, filename: str) -> Any:
+    "Instantiate class using its string name"
+    classname = METHODS[method]['class']
+    class_ = globals()[classname]
+    return class_(filename)
 
 
 def make_dirs(dirpath: str) -> None:
@@ -91,7 +98,7 @@ if __name__ == "__main__":
             else:
                 model_file = METHODS[method]['model']
             # Instantiate the implemented classifier class
-            method_class = METHODS[method]['class'](model_file)
+            method_class = get_class(method, model_file)
         except KeyError:
             raise Exception("Incorrect method specification. Please choose from existing methods!\n{}"
                             .format(", ".join(method_list)))

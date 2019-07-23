@@ -1,5 +1,5 @@
 # Fine Grained Sentiment Classification
-This repo shows a comparison and discussion of various NLP methods to perform 5-class sentiment classification on the  [Stanford Sentiment Treebank](https://nlp.stanford.edu/sentiment/) (SST-5) dataset. To see the differences between the methods and in which way they differ from one another, we predict classes with multiple rule-based, linear and neural network-based classifiers.
+This repo shows a comparison and discussion of various NLP methods to perform 5-class sentiment classification on the  [Stanford Sentiment Treebank](https://nlp.stanford.edu/sentiment/) (SST-5) dataset. The goal is to predict classes on this dataset with multiple rule-based, linear and neural network-based classifiers and see how they differ from one another.
 
 Currently the following classifiers have been implemented:
  - **TextBlob**: Rule-based, uses the internal `polarity` metric from the [TextBlob](https://textblob.readthedocs.io/en/dev/) library.
@@ -98,9 +98,9 @@ OR
 
 ## Explain classifier results
 
-Once a sentiment model has been trained, we can use it to explain the classifier's predictions. To do this we make use of the [LIME library](https://github.com/marcotcr/lime). The LIME method generates a local linear approximation of the model (regardless of whether the model is *globally* nonlinear or not), and then perturbs this local model to identify features that influence the classification results the most. For multi-class cases such as this one, LIME produces a list of probabilities for each class, and also highlights the effect of each token feature's on the predicted class using a [one-vs-rest method](https://en.wikipedia.org/wiki/Multiclass_classification#One-vs.-rest).
+Once a sentiment classifier has been trained, we can use it to explain the classifier's predictions. To do this we make use of the [LIME library](https://github.com/marcotcr/lime). The LIME method generates a local linear approximation of the model (regardless of whether the model is *globally* nonlinear or not), and then perturbs this local model to identify features that influence the classification results the most. For multi-class cases such as this one, LIME produces a list of probabilities for each class, and also highlights the effect of each token feature's on the predicted class using a [one-vs-rest method](https://en.wikipedia.org/wiki/Multiclass_classification#One-vs.-rest).
 
-A method dictionary is specified as before, this time for the explainer class (ins `explainer.py`). This dictionary makes it easier to update the explainer framework with more methods over time - simply update the method name and its class names and models files as shown above. 
+To make it easier to update the explainer framework with more methods over time, look at the method dictionary in `explainer.py`.
 
     METHODS = {
         'logistic': {
@@ -117,14 +117,16 @@ A method dictionary is specified as before, this time for the explainer class (i
         },
     }
 
- Define a few sample sentences (as a list in `explainer.py`) from the SST-5 test data.
+Note that for the logistic regression, we specify the path to the training data (the logistic regression model is trained within the explainer class) while for the other learners we point to the trained classifier models directly. 
+
+The sentences whose clsssification results are to be explained are specified as a list in `explainer.py`. 
 
     samples = [
         "It 's not horrible , just horribly mediocre .",
         "Light , cute and forgettable .",
     ]
 
-Run the explainer on each, or all of methods as follows:
+Run the explainer for the list of sentences using each, or all the classification methods as follows:
 
     python3 explainer.py --method logistic fasttext flair
 

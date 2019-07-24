@@ -4,7 +4,7 @@ cython==0.29.3
 pandas==0.23.4
 nltk==3.4.3
 textblob==0.15.3
-pytorch_pretrained_bert==0.6.2
+pytorch-transformers==1.0.0
 flair==0.4.2    # If not using flair, remove this line
 fasttext==0.9.1
 lime==0.1.1.36

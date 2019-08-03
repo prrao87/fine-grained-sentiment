@@ -19,7 +19,7 @@ def plot_confusion_matrix(y_true, y_pred,
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
     fig, ax = plt.subplots()
-    im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
+    im = ax.imshow(cm, interpolation='nearest', origin='lower', cmap=cmap)
     ax.figure.colorbar(im, ax=ax)
     # Show all ticks
     ax.set(xticks=np.arange(cm.shape[1]),

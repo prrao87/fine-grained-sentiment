@@ -3,6 +3,7 @@ import argparse
 from typing import Tuple
 from pathlib import Path
 
+
 def trainer(file_path: Path,
             filenames: Tuple[str, str, str],
             checkpoint: str,
@@ -44,19 +45,12 @@ def trainer(file_path: Path,
     # Create label dictionary from provided labels in data
     label_dict = corpus.make_label_dictionary()
 
-    if not stacked_embedding:
-        # If nothing to stack, just use Flair embeddings
-        word_embeddings = [
-            FlairEmbeddings('news-forward'),
-            FlairEmbeddings('news-backward'),
-        ]
-    else:
-        # Stack Flair string-embeddings with optional embeddings
-        word_embeddings = [
-            stacked_embedding,
-            FlairEmbeddings('news-forward'),
-            FlairEmbeddings('news-backward'),
-        ]
+    # Stack Flair string-embeddings with optional embeddings
+    word_embeddings = list(filter(None, [
+        stacked_embedding,
+        FlairEmbeddings('news-forward'),
+        FlairEmbeddings('news-backward'),
+    ]))
     # Initialize document embedding by passing list of word embeddings
     document_embeddings = DocumentRNNEmbeddings(
         word_embeddings,

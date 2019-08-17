@@ -20,7 +20,7 @@ def trainer(filepath: str,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--filepath', type=str, help="Dataset path", default="data/sst")
+    parser.add_argument('--filepath', type=str, help="Dataset path", default="../data/sst")
     parser.add_argument('--train', type=str, help="Training set filename", default="sst_train.txt")
     parser.add_argument('--model', type=str, help="Trained model output name", default="sst.bin")
     parser.add_argument('--epochs', type=int, help="Number of epochs", default=100)

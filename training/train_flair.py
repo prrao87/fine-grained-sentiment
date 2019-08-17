@@ -88,7 +88,7 @@ def trainer(file_path: Path,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--filepath', type=str, help="Dataset path", default="data/sst")
+    parser.add_argument('--filepath', type=str, help="Dataset path", default="../data/sst")
     parser.add_argument('--train', type=str, help="Training set filename", default="sst_train.txt")
     parser.add_argument('--dev', type=str, help="Dev set filename", default="sst_dev.txt")
     parser.add_argument('--test', type=str, help="Test/validation set filename", default="sst_test.txt")

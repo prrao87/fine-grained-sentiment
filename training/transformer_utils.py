@@ -13,21 +13,8 @@ from pytorch_transformers import BertTokenizer
 
 TEXT_COL, LABEL_COL = 'text', 'truth'
 MAX_LENGTH = 256
-BATCH_SIZE = 16
-LOG_DIR = "./logs/"
-CACHE_DIR = "./cache/"
 DATASET_DIR = "../data/sst"
-# Define device
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 n_cpu = multiprocessing.cpu_count()
-
-
-def read_sst2(data_dir, colnames=[TEXT_COL, LABEL_COL]):
-    datasets = {}
-    for t in ["train", "dev", "test"]:
-        df = pd.read_csv(os.path.join(data_dir, f"{t}.tsv"), header=None, sep='\t', names=colnames)
-        datasets[t] = df[[LABEL_COL, TEXT_COL]]
-    return datasets
 
 
 def read_sst5(data_dir, colnames=[LABEL_COL, TEXT_COL]):
@@ -78,9 +65,7 @@ def create_dataloader(df: pd.DataFrame,
                       processor: TextProcessor,
                       batch_size: int = 32,
                       shuffle: bool = False,
-                      valid_pct: float = None,
-                      text_col: str = "text",
-                      label_col: str = "label"):
+                      valid_pct: float = None):
     "Process rows in pd.DataFrame using n_cpus and return a DataLoader"
 
     tqdm.pandas()
@@ -114,7 +99,7 @@ def create_dataloader(df: pd.DataFrame,
 
 if __name__ == "__main__":
     datasets = read_sst5(DATASET_DIR)
-    print(datasets['train'].head(50))
+    print(datasets['train'].head(10))
     labels = list(set(datasets["train"][LABEL_COL].tolist()))
     label2int = {label: i for i, label in enumerate(labels)}
     tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
@@ -122,8 +107,8 @@ if __name__ == "__main__":
     pad_token = tokenizer.vocab['[PAD]']  # pad token
     processor = TextProcessor(tokenizer, label2int, clf_token, pad_token, max_length=MAX_LENGTH)
 
-    train_dl = create_dataloader(datasets["train"], processor)
-    valid_dl = create_dataloader(datasets["dev"], processor)          
-    test_dl = create_dataloader(datasets["test"], processor)
+    train_dl = create_dataloader(datasets["train"], processor, batch_size=32)
+    valid_dl = create_dataloader(datasets["dev"], processor, batch_size=32)
+    test_dl = create_dataloader(datasets["test"], processor, batch_size=32)
 
-    # print(len(train_dl), len(test_dl))
+    print(len(train_dl), len(valid_dl), len(test_dl))  # Length of batches

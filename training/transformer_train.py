@@ -149,7 +149,7 @@ def train():
     }, os.path.join(args.logdir, "metadata.bin"))
 
     # Run trainer
-    trainer.run(train_dl, max_epochs=3)
+    trainer.run(train_dl, max_epochs=args.n_epochs)
     # Evaluate
     evaluator.run(test_dl)
     print(f"test results - acc: {100*evaluator.state.metrics['accuracy']:.3f}")

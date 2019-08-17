@@ -57,14 +57,17 @@ def train():
     # Define pretrained model and optimizer
     model, state_dict, config = load_pretrained_model(args)
     optimizer = AdamW(model.parameters(), lr=args.lr, correct_bias=False)
-    print("Model has {} parameters".format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
+    num_model_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Model has {num_model_params:,} parameters")
     # Define datasets
     datasets = read_sst5(args.dataset_path)
+
+    # Define labels
     labels = list(set(datasets["train"][LABEL_COL].tolist()))
     assert len(labels) == args.num_classes  # Specified number of classes should be equal to that in the given dataset!
-
     label2int = {label: i for i, label in enumerate(labels)}
     int2label = {i: label for label, i in label2int.items()}
+
     # Get BertTokenizer for this pretrained model
     tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
     clf_token = tokenizer.vocab['[CLS]']  # classifier token
@@ -72,6 +75,7 @@ def train():
     processor = TextProcessor(tokenizer, label2int, clf_token, pad_token, max_length=config.num_max_positions)
 
     train_dl = create_dataloader(datasets["train"], processor,
+                                 shuffle=True,
                                  batch_size=args.train_batch_size,
                                  valid_pct=None)
 
@@ -135,7 +139,7 @@ def train():
     # save checkpoints and finetuning config
     checkpoint_handler = ModelCheckpoint(args.logdir, 'checkpoint',
                                          save_interval=1, require_empty=False)
-    trainer.add_event_handler(Events.EPOCH_COMPLETED, checkpoint_handler, {'sst2_model': model})
+    trainer.add_event_handler(Events.EPOCH_COMPLETED, checkpoint_handler, {'sst_model': model})
 
     # save metadata
     torch.save({

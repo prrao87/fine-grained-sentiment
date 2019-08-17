@@ -1,11 +1,5 @@
 import torch
 import torch.nn as nn
-import numpy as np
-
-
-def get_num_params(model):
-    mp = filter(lambda p: p.requires_grad, model.parameters())
-    return sum(np.prod(p.size()) for p in mp)
 
 
 class Transformer(nn.Module):

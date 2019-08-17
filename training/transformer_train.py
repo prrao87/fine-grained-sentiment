@@ -10,7 +10,7 @@ from ignite.handlers import ModelCheckpoint
 from ignite.contrib.handlers import PiecewiseLinear, ProgressBar
 
 from transformer_utils import TextProcessor, read_sst5, create_dataloader
-from transformer_model import TransformerWithClfHead, get_num_params
+from transformer_model import TransformerWithClfHead
 
 PRETRAINED_MODEL_URL = "https://s3.amazonaws.com/models.huggingface.co/naacl-2019-tutorial/"
 TEXT_COL, LABEL_COL = 'text', 'truth'  # Column names in pd.DataFrame for sst dataset
@@ -57,7 +57,7 @@ def train():
     # Define pretrained model and optimizer
     model, state_dict, config = load_pretrained_model(args)
     optimizer = AdamW(model.parameters(), lr=args.lr, correct_bias=False)
-    print(f"Model has {get_num_params(model)} parameters")
+    print("Model has {} parameters".format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
     # Define datasets
     datasets = read_sst5(args.dataset_path)
     labels = list(set(datasets["train"][LABEL_COL].tolist()))

@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 class Transformer(nn.Module):
-    "Adopted from https://github.com/huggingface/naacl_transfer_learning_tutorial"
+    "Adapted from https://github.com/huggingface/naacl_transfer_learning_tutorial"
 
     def __init__(self, embed_dim, hidden_dim, num_embeddings, num_max_positions, num_heads, num_layers, dropout, causal):
         super().__init__()
@@ -49,7 +49,7 @@ class Transformer(nn.Module):
 
 
 class TransformerWithClfHead(nn.Module):
-    "Adopted from https://github.com/huggingface/naacl_transfer_learning_tutorial"
+    "Adapted from https://github.com/huggingface/naacl_transfer_learning_tutorial"
     def __init__(self, config, fine_tuning_config):
         super().__init__()
         self.config = fine_tuning_config

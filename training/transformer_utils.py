@@ -1,3 +1,7 @@
+"""
+This code is adapted from the original version in this excellent notebook:
+https://github.com/ben0it8/containerized-transformer-finetuning/blob/develop/research/finetune-transformer-on-imdb5k.ipynb
+"""
 from concurrent.futures import ProcessPoolExecutor
 from itertools import repeat
 import multiprocessing
@@ -111,4 +115,4 @@ if __name__ == "__main__":
     valid_dl = create_dataloader(datasets["dev"], processor, batch_size=32)
     test_dl = create_dataloader(datasets["test"], processor, batch_size=32)
 
-    print(len(train_dl), len(valid_dl), len(test_dl))  # Length of batches
+    print(len(train_dl), len(valid_dl), len(test_dl))

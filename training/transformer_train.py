@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+"""
+This code is adapted from the original version in this excellent notebook:
+https://github.com/ben0it8/containerized-transformer-finetuning/blob/develop/research/finetune-transformer-on-imdb5k.ipynb
+"""
 import argparse
 import multiprocessing
 import os

@@ -24,7 +24,7 @@ n_cpu = multiprocessing.cpu_count()
 
 def load_pretrained_model(args):
     "download pre-trained model and config"
-    state_dict = torch.load(cached_path(os.path.join(args.model_checkpoint, "model_checkpoint.pth")),
+    state_dict = torch.load(cached_path(os.path.join(args.model_checkpoint, "model_weights.pth")),
                             map_location='cpu')
     config = torch.load(cached_path(os.path.join(args.model_checkpoint, "model_training_args.bin")))
     # Initialize model: Transformer base + classifier head
@@ -45,7 +45,7 @@ def load_pretrained_model(args):
         trained_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
 
         print(f"\nWe will train {trained_parameters:,} parameters out of {full_parameters:,}"
-              f" (i.e. {100 * trained_parameters/full_parameters:.1f}%)")
+              f" (i.e. {100 * trained_parameters/full_parameters:.1f}%) of the full parameters")
 
     return model, state_dict, config
 
@@ -63,12 +63,12 @@ def train():
     parser.add_argument("--train_batch_size", type=int, default=32, help="Batch size for training")
     parser.add_argument("--valid_batch_size", type=int, default=32, help="Batch size for validation")
     parser.add_argument("--valid_pct", type=float, default=0.1, help="Percentage of test data to use for validation")
-    parser.add_argument("--lr", type=float, default=6.25e-5, help="Learning rate")
+    parser.add_argument("--lr", type=float, default=7.5e-5, help="Learning rate")
     parser.add_argument("--n_warmup", type=int, default=10, help="Number of warmup iterations")
     parser.add_argument("--max_norm", type=float, default=1.0, help="Clipping gradient norm")
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay")
     parser.add_argument("--n_epochs", type=int, default=3, help="Number of training epochs")
-    parser.add_argument("--gradient_acc_steps", type=int, default=2, help="Accumulate gradient")
+    parser.add_argument("--gradient_acc_steps", type=int, default=1, help="Accumulate gradient")
     parser.add_argument("--init_range", type=float, default=0.02, help="Normal initialization standard deviation")
 
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
@@ -94,14 +94,14 @@ def train():
     pad_token = tokenizer.vocab['[PAD]']  # pad token
     processor = TextProcessor(tokenizer, label2int, clf_token, pad_token, max_length=config.num_max_positions)
 
-    # train_dl = create_dataloader(datasets["train"], processor,
-    #                              shuffle=True,
-    #                              batch_size=args.train_batch_size,
-    #                              valid_pct=None)
+    train_dl = create_dataloader(datasets["train"], processor,
+                                 shuffle=True,
+                                 batch_size=args.train_batch_size,
+                                 valid_pct=None)
 
-    train_dl, valid_dl = create_dataloader(datasets["dev"], processor,
-                                           batch_size=args.train_batch_size,
-                                           valid_pct=args.valid_pct)
+    valid_dl = create_dataloader(datasets["dev"], processor,
+                                 batch_size=args.train_batch_size,
+                                 valid_pct=None)
 
     test_dl = create_dataloader(datasets["test"], processor,
                                 batch_size=args.valid_batch_size,
@@ -145,7 +145,7 @@ def train():
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_validation_results(engine):
         evaluator.run(valid_dl)
-        print(f"validation epoch: {engine.state.epoch} acc: {100*evaluator.state.metrics['accuracy']}")
+        print(f"validation epoch: {engine.state.epoch} acc: {100*evaluator.state.metrics['accuracy']:.3f}%")
 
     # Learning rate schedule: linearly warm-up to lr and then to zero
     scheduler = PiecewiseLinear(optimizer, 'lr', [(0, 0.0), (args.n_warmup, args.lr),
@@ -166,7 +166,7 @@ def train():
         "config": config,
         "config_ft": args,
         "int2label": int2label
-    }, os.path.join(args.logdir, "metadata.bin"))
+    }, os.path.join(args.logdir, "model_training_args.bin"))
 
     # Run trainer
     trainer.run(train_dl, max_epochs=args.n_epochs)

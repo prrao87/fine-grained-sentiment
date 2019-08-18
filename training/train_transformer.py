@@ -6,6 +6,7 @@ https://github.com/prrao87/naacl_transfer_learning_tutorial
 import argparse
 import multiprocessing
 import os
+import sys
 import torch
 from pytorch_transformers import BertTokenizer, cached_path
 from pytorch_transformers.optimization import AdamW
@@ -13,9 +14,9 @@ from ignite.engine import Engine, Events
 from ignite.metrics import RunningAverage, Accuracy
 from ignite.handlers import ModelCheckpoint
 from ignite.contrib.handlers import PiecewiseLinear, ProgressBar
-
-from transformer_utils import TextProcessor, read_sst5, create_dataloader
-from transformer_model import TransformerWithClfHeadAndAdapters
+sys.path.append(os.path.abspath('transformer_utils'))
+from loader import TextProcessor, read_sst5, create_dataloader
+from model import TransformerWithClfHeadAndAdapters
 
 PRETRAINED_MODEL_URL = "https://s3.amazonaws.com/models.huggingface.co/naacl-2019-tutorial/"
 TEXT_COL, LABEL_COL = 'text', 'truth'  # Column names in pd.DataFrame for sst dataset

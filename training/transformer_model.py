@@ -1,10 +1,12 @@
+"""
+All code in this file is as per the NAACL transfer learning tutorial:
+https://github.com/prrao87/naacl_transfer_learning_tutorial
+"""
 import torch
 import torch.nn as nn
 
 
 class Transformer(nn.Module):
-    "Adapted from https://github.com/huggingface/naacl_transfer_learning_tutorial"
-
     def __init__(self, embed_dim, hidden_dim, num_embeddings, num_max_positions, num_heads, num_layers, dropout, causal):
         super().__init__()
         self.causal = causal
@@ -48,14 +50,66 @@ class Transformer(nn.Module):
         return h
 
 
-class TransformerWithClfHead(nn.Module):
-    "Adapted from https://github.com/huggingface/naacl_transfer_learning_tutorial"
+class TransformerWithAdapters(Transformer):
+    def __init__(self, adapters_dim, embed_dim, hidden_dim, num_embeddings, num_max_positions,
+                 num_heads, num_layers, dropout, causal):
+        """ Transformer with adapters (small bottleneck layers) """
+        super().__init__(embed_dim, hidden_dim, num_embeddings, num_max_positions, num_heads, num_layers,
+                         dropout, causal)
+        self.adapters_1 = nn.ModuleList()
+        self.adapters_2 = nn.ModuleList()
+        for _ in range(num_layers):
+
+            self.adapters_1.append(nn.Sequential(nn.Linear(embed_dim, adapters_dim),
+                                                 nn.ReLU(),
+                                                 nn.Linear(adapters_dim, embed_dim)))
+
+            self.adapters_2.append(nn.Sequential(nn.Linear(embed_dim, adapters_dim),
+                                                 nn.ReLU(),
+                                                 nn.Linear(adapters_dim, embed_dim)))
+
+    def forward(self, x, padding_mask=None):
+        """ x has shape [seq length, batch], padding_mask has shape [batch, seq length] """
+        positions = torch.arange(len(x), device=x.device).unsqueeze(-1)
+        h = self.tokens_embeddings(x)
+        h = h + self.position_embeddings(positions).expand_as(h)
+        h = self.dropout(h)
+
+        attn_mask = None
+        if self.causal:
+            attn_mask = torch.full((len(x), len(x)), -float('Inf'), device=h.device, dtype=h.dtype)
+            attn_mask = torch.triu(attn_mask, diagonal=1)
+
+        for (layer_norm_1, attention, adapter_1, layer_norm_2, feed_forward, adapter_2) \
+            in zip(self.layer_norms_1, self.attentions, self.adapters_1,
+                   self.layer_norms_2, self.feed_forwards, self.adapters_2):
+            h = layer_norm_1(h)
+            x, _ = attention(h, h, h, attn_mask=attn_mask, need_weights=False, key_padding_mask=padding_mask)
+            x = self.dropout(x)
+            x = adapter_1(x) + x  # Add an adapter with a skip-connection after attention module
+            h = x + h
+
+            h = layer_norm_2(h)
+            x = feed_forward(h)
+            x = self.dropout(x)
+            x = adapter_2(x) + x  # Add an adapter with a skip-connection after feed-forward module
+            h = x + h
+        return h
+
+
+class TransformerWithClfHeadAndAdapters(nn.Module):
     def __init__(self, config, fine_tuning_config):
+        """ Transformer with a classification head and adapters. """
         super().__init__()
         self.config = fine_tuning_config
-        self.transformer = Transformer(config.embed_dim, config.hidden_dim, config.num_embeddings,
-                                       config.num_max_positions, config.num_heads, config.num_layers,
-                                       fine_tuning_config.dropout, causal=not config.mlm)
+        if fine_tuning_config.adapters_dim > 0:
+            self.transformer = TransformerWithAdapters(fine_tuning_config.adapters_dim, config.embed_dim, config.hidden_dim,
+                                                       config.num_embeddings, config.num_max_positions, config.num_heads,
+                                                       config.num_layers, fine_tuning_config.dropout, causal=not config.mlm)
+        else:
+            self.transformer = Transformer(config.embed_dim, config.hidden_dim, config.num_embeddings,
+                                           config.num_max_positions, config.num_heads, config.num_layers,
+                                           fine_tuning_config.dropout, causal=not config.mlm)
 
         self.classification_head = nn.Linear(config.embed_dim, fine_tuning_config.num_classes)
         self.apply(self.init_weights)
@@ -66,7 +120,7 @@ class TransformerWithClfHead(nn.Module):
         if isinstance(module, (nn.Linear, nn.LayerNorm)) and module.bias is not None:
             module.bias.data.zero_()
 
-    def forward(self, x, clf_tokens_mask, clf_labels=None, padding_mask=None):
+    def forward(self, x, clf_tokens_mask, lm_labels=None, clf_labels=None, padding_mask=None):
         hidden_states = self.transformer(x, padding_mask)
 
         clf_tokens_states = (hidden_states * clf_tokens_mask.unsqueeze(-1).float()).sum(dim=0)
@@ -76,4 +130,5 @@ class TransformerWithClfHead(nn.Module):
             loss_fct = nn.CrossEntropyLoss(ignore_index=-1)
             loss = loss_fct(clf_logits.view(-1, clf_logits.size(-1)), clf_labels.view(-1))
             return clf_logits, loss
+
         return clf_logits

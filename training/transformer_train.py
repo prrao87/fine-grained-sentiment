@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-This code is adapted from the original version in this excellent notebook:
-https://github.com/ben0it8/containerized-transformer-finetuning/blob/develop/research/finetune-transformer-on-imdb5k.ipynb
+All code in this file is as per the NAACL transfer learning tutorial:
+https://github.com/prrao87/naacl_transfer_learning_tutorial
 """
 import argparse
 import multiprocessing
@@ -15,7 +15,7 @@ from ignite.handlers import ModelCheckpoint
 from ignite.contrib.handlers import PiecewiseLinear, ProgressBar
 
 from transformer_utils import TextProcessor, read_sst5, create_dataloader
-from transformer_model import TransformerWithClfHead
+from transformer_model import TransformerWithClfHeadAndAdapters
 
 PRETRAINED_MODEL_URL = "https://s3.amazonaws.com/models.huggingface.co/naacl-2019-tutorial/"
 TEXT_COL, LABEL_COL = 'text', 'truth'  # Column names in pd.DataFrame for sst dataset
@@ -28,10 +28,24 @@ def load_pretrained_model(args):
                             map_location='cpu')
     config = torch.load(cached_path(os.path.join(args.model_checkpoint, "model_training_args.bin")))
     # Initialize model: Transformer base + classifier head
-    model = TransformerWithClfHead(config=config, fine_tuning_config=args).to(args.device)
+    model = TransformerWithClfHeadAndAdapters(config=config, fine_tuning_config=args).to(args.device)
     incompatible_keys = model.load_state_dict(state_dict, strict=False)
     print(f"Parameters discarded from the pretrained model: {incompatible_keys.unexpected_keys}")
     print(f"Parameters added in the model: {incompatible_keys.missing_keys}")
+
+    if args.adapters_dim > 0:
+        # Display adaptation parameters
+        for name, param in model.named_parameters():
+            if 'embeddings' not in name and 'classification' not in name and 'adapters_1' not in name and 'adapters_2' not in name:
+                param.detach_()
+                param.requires_grad = False
+            else:
+                param.requires_grad = True
+        full_parameters = sum(p.numel() for p in model.parameters())
+        trained_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+        print(f"\nWe will train {trained_parameters:,} parameters out of {full_parameters:,}"
+              f" (i.e. {100 * trained_parameters/full_parameters:.1f}%)")
 
     return model, state_dict, config
 
@@ -41,9 +55,10 @@ def train():
     parser.add_argument("--model_checkpoint", type=str, default=PRETRAINED_MODEL_URL, help="Path to the pretrained model checkpoint")
     parser.add_argument("--dataset_path", type=str, default='../data/sst', help="Directory to dataset.")
     parser.add_argument("--dataset_cache", type=str, default='./dataset_cache', help="Path to dataset cache")
-    parser.add_argument("--logdir", type=str, default='./logs', help="Path to logs")
+    parser.add_argument("--logdir", type=str, default='./transformer_results', help="Path to logs")
     parser.add_argument("--num_classes", type=int, default=5, help="Number of classes for the target classification task")
-    parser.add_argument("--dropout", type=float, default=0.05, help="Dropout for transformer module")
+    parser.add_argument("--adapters_dim", type=int, default=-1, help="If >0 add adapters to the model with adapters_dim dimension")
+    parser.add_argument("--dropout", type=float, default=0.1, help="Dropout for transformer module")
     parser.add_argument("--clf_loss_coef", type=float, default=1, help="If >0 add a classification loss")
     parser.add_argument("--train_batch_size", type=int, default=32, help="Batch size for training")
     parser.add_argument("--valid_batch_size", type=int, default=32, help="Batch size for validation")
@@ -79,19 +94,20 @@ def train():
     pad_token = tokenizer.vocab['[PAD]']  # pad token
     processor = TextProcessor(tokenizer, label2int, clf_token, pad_token, max_length=config.num_max_positions)
 
-    train_dl = create_dataloader(datasets["train"], processor,
-                                 shuffle=True,
-                                 batch_size=args.train_batch_size,
-                                 valid_pct=None)
+    # train_dl = create_dataloader(datasets["train"], processor,
+    #                              shuffle=True,
+    #                              batch_size=args.train_batch_size,
+    #                              valid_pct=None)
 
-    valid_dl = create_dataloader(datasets["dev"], processor,
-                                 batch_size=args.train_batch_size,
-                                 valid_pct=None)
+    train_dl, valid_dl = create_dataloader(datasets["dev"], processor,
+                                           batch_size=args.train_batch_size,
+                                           valid_pct=args.valid_pct)
 
     test_dl = create_dataloader(datasets["test"], processor,
                                 batch_size=args.valid_batch_size,
                                 valid_pct=None)
 
+    # Training function and trainer
     def update(engine, batch):
         "update function for training"
         model.train()
@@ -108,19 +124,18 @@ def train():
             optimizer.step()
             optimizer.zero_grad()
         return loss.item()
+    trainer = Engine(update)
 
+    # Evaluation function and evaluator (evaluator output is the input of the metrics)
     def inference(engine, batch):
-        "update function for evaluation"
         model.eval()
         with torch.no_grad():
             batch, labels = (t.to(args.device) for t in batch)
             inputs = batch.transpose(0, 1).contiguous()  # to shape [seq length, batch]
-            logits = model(inputs,
-                           clf_tokens_mask=(inputs == clf_token),
-                           padding_mask=(batch == pad_token))
-        return logits, labels
-
-    trainer = Engine(update)
+            clf_logits = model(inputs,
+                               clf_tokens_mask=(inputs == clf_token),
+                               padding_mask=(batch == pad_token))
+        return clf_logits, labels
     evaluator = Engine(inference)
 
     # add metric to evaluator
@@ -132,21 +147,21 @@ def train():
         evaluator.run(valid_dl)
         print(f"validation epoch: {engine.state.epoch} acc: {100*evaluator.state.metrics['accuracy']}")
 
-    # lr schedule: linearly warm-up to lr and then to zero
+    # Learning rate schedule: linearly warm-up to lr and then to zero
     scheduler = PiecewiseLinear(optimizer, 'lr', [(0, 0.0), (args.n_warmup, args.lr),
                                 (len(train_dl) * args.n_epochs, 0.0)])
     trainer.add_event_handler(Events.ITERATION_STARTED, scheduler)
 
-    # add progressbar with loss
+    # Add progressbar with loss
     RunningAverage(output_transform=lambda x: x).attach(trainer, "loss")
     ProgressBar(persist=True).attach(trainer, metric_names=['loss'])
 
-    # save checkpoints and finetuning config
+    # Save checkpoints and finetuning config
     checkpoint_handler = ModelCheckpoint(args.logdir, 'checkpoint',
                                          save_interval=1, require_empty=False)
     trainer.add_event_handler(Events.EPOCH_COMPLETED, checkpoint_handler, {'sst_model': model})
 
-    # save metadata
+    # Save metadata
     torch.save({
         "config": config,
         "config_ft": args,
@@ -158,7 +173,7 @@ def train():
     # Evaluate
     evaluator.run(test_dl)
     print(f"test results - acc: {100*evaluator.state.metrics['accuracy']:.3f}")
-    # save model weights
+    # Save fine-tuned model weights
     torch.save(model.state_dict(), os.path.join(args.logdir, "model_weights.pth"))
 
 

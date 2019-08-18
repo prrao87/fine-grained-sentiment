@@ -24,7 +24,7 @@ n_cpu = multiprocessing.cpu_count()
 
 def load_pretrained_model(args):
     "download pre-trained model and config"
-    state_dict = torch.load(cached_path(os.path.join(args.model_checkpoint, "model_weights.pth")),
+    state_dict = torch.load(cached_path(os.path.join(args.model_checkpoint, "model_checkpoint.pth")),
                             map_location='cpu')
     config = torch.load(cached_path(os.path.join(args.model_checkpoint, "model_training_args.bin")))
     # Initialize model: Transformer base + classifier head

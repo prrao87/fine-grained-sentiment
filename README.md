@@ -53,12 +53,12 @@ To resume training from a checkpoint, just pass in the path to the checkpoint fi
 #### Causal Transformer
 The causal transformer in this repo is implemented as per [HuggingFace's transfer learning tutorial example](https://github.com/prrao87/naacl_transfer_learning_tutorial). An optional argument to include *adapter modules* as per the paper ["Parameter-efficient Transfer Learning for NLP"](https://arxiv.org/pdf/1902.00751.pdf) is provided in the script `train_transformer.py`. A full description of the pre-training stage and the logic for implementing the transformer layers is provided in the [tutorial slides](https://docs.google.com/presentation/d/1fIhGikFPnb7G5kr58OvYC3GN4io7MznnM0aAgadvJfc/edit). 
 
-To train causal transformer (fine-tune for classification only), train the fine-tuning routine for three epochs as shown below:
+Train the causal transformer (fine-tuning for classification only) as shown below. This version of the transformer has 50 million trainable parameters. 
 
     cd training
     python3 train_transformer.py --n_epochs 3 --lr 7.5e-5
 
-To run the model with adapter, i.e. bottleneck layers (inserted within skip-connections just after the attention and feed-forward modules), use the `adapters_dim` argument. This will **only** train the adapters, linear layers and the added embeddings, while keeping the other parameters **frozen**. In the below example, we include adapters with a dimensionality of 16. Note that we **scale up the learning rate by a factor of 10** when using adapters because we added a number of fresh parameters to the pre-trained model while reducing the total number of trainable parameters. 
+To run the model with adapters, i.e. bottleneck layers (inserted within skip-connections just after the attention and feed-forward modules), use the `adapters_dim` argument. This will **only** train the adapters, linear layers and the added embeddings, while keeping the other parameters **frozen**. In the below example, we include adapters with a dimensionality of 16 - adding this argument will reduce the number of trainable parameters in the model to 25% of the original (around 12 million). Note that we **scale up the learning rate by a factor of 10** when using adapters because we added a number of newly initialized parameters to the pre-trained model.
 
     python3 train_transformer.py --adapters_dim 16 --n_epochs 3 --lr 7.5e-4
 

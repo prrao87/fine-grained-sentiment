@@ -7,7 +7,8 @@ Currently the following classifiers have been implemented:
  - **Logistic Regression**: Trains a simple logistic regression model after converting the vocabulary to feature vectors and considering the effect of word frequencies using TF-IDF.
  - **SVM**: Trains a simple linear  support vector machine after converting the vocabulary to feature vectors and considering the effect of word frequencies using TF-IDF.
  - **FastText**: Trains a [FastText](https://fasttext.cc/docs/en/supervised-tutorial.html) classifier using a combination of trigrams and a 7-word context window size.
- - **Flair**: Trains a [Flair NLP](https://github.com/zalandoresearch/flair) classifier using ["stacked" embeddings](https://github.com/zalandoresearch/flair/blob/master/resources/docs/TUTORIAL_7_TRAINING_A_MODEL.md), i.e. a combined representation of either GloVe, Bert or ELMo word embeddings and Flair (forward and backward) string embeddings.  
+ - **Flair**: Trains a [Flair NLP](https://github.com/zalandoresearch/flair) classifier using ["stacked" embeddings](https://github.com/zalandoresearch/flair/blob/master/resources/docs/TUTORIAL_7_TRAINING_A_MODEL.md#training-a-text-classification-model), i.e. a combined representation of either GloVe, Bert or ELMo word embeddings and Flair (forward and backward) string embeddings.
+ - **Causal Transformer**: Trains a small transformer model based on OpenAI's GPT-2 architecture (but *much* smaller) using a causal (i.e. *left-to-right*) pre-trained language model. The pre-trained model's weights are obtained from HuggingFace's [NAACL transfer learning tutorial](https://github.com/prrao87/naacl_transfer_learning_tutorial) - following which we can simply fine-tune the model's top layers by adding a custom classification head. 
 
 ## Installation
 
@@ -26,21 +27,40 @@ For further development, simply activate the existing virtual environment.
 
 The training of the linear models (Logistic Regression and SVM) are done during runtime of the classifier (next step) since it requires very little tuning. To train the methods that rely on word/document embeddings, however, we use separate scripts to help more easily tune the hyperparameters. 
 
+Training code for the models is provided in the `training` directory. 
+
+#### FastText
 To train the FastText model, run `train_fasttext.py`. For this case, the following hyperparameters were used in training the SST-5 dataset.
 
+    cd training
     python3 train_fasttext.py --lr 0.5 --epochs 100 --wordNgrams 3 --ws 7 --dim 100
 
+#### Flair
 To train the Flair model, run `train_flair.py`. To enhance the model's context, we can stack word embeddings (either GloVe, ELMo or Bert) with Flair's string embeddings. This model takes significantly longer to run on a GPU-enabled machine (of the order of several hours).
 
 The below examples show how to train Flair models with stacked word/string embeddings using the provided script. Specifying the `--stack` argument will invoke either GloVe, ELMo (original) or Bert (Base, cased) word embeddings along with Flair forward/backward string embeddings to train the classifier. 
 
+    cd training
     python3 train_flair.py --stack glove --epochs 25
     python3 train_flair.py --stack bert --epochs 25
     python3 train_flair.py --stack elmo --epochs 25
 
 To resume training from a checkpoint, just pass in the path to the checkpoint file.
 
+    cd training
     python3 train_flair.py --stack glove --checkpoint models/flair/bert/checkpoint.pt --epochs 25
+
+#### Causal Transformer
+The causal transformer in this repo is implemented as per [HuggingFace's transfer learning tutorial example](https://github.com/prrao87/naacl_transfer_learning_tutorial). An optional argument to include *adapter modules* as per the paper ["Parameter-efficient Transfer Learning for NLP"](https://arxiv.org/pdf/1902.00751.pdf) is provided in the script `train_transformer.py`. A full description of the pre-training stage and the logic for implementing the transformer layers is provided in the [tutorial slides](https://docs.google.com/presentation/d/1fIhGikFPnb7G5kr58OvYC3GN4io7MznnM0aAgadvJfc/edit). 
+
+To train causal transformer (fine-tune for classification only), train the fine-tuning routine for three epochs as shown below:
+
+    cd training
+    python3 train_transformer.py --n_epochs 3 --lr 7.5e-5
+
+To run the model with adapter, i.e. bottleneck layers (inserted within skip-connections just after the attention and feed-forward modules), use the `adapters_dim` argument. This will **only** train the adapters, linear layers and the added embeddings, while keeping the other parameters **frozen**. In the below example, we include adapters with a dimensionality of 16. Note that we **scale up the learning rate by a factor of 10** when using adapters because we added a number of fresh parameters to the pre-trained model while reducing the total number of trainable parameters. 
+
+    python3 train_transformer.py --adapters_dim 16 --n_epochs 3 --lr 7.5e-4
 
 
 ## Run sentiment analysis and output confusion matrix

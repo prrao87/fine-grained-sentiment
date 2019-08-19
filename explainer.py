@@ -33,6 +33,7 @@ class LogisticExplainer:
     """Class to explain classification results of a scikit-learn 
     Logistic Regression Pipeline. The model is trained within this class."""
     def __init__(self, path_to_train_data: str) -> None:
+        "Input training data path for training Logistic Regression classifier"
         import pandas as pd
         # Read in training data set
         self.train_df = pd.read_csv(path_to_train_data, sep='\t', header=None, names=["truth", "text"])
@@ -68,6 +69,7 @@ class FastTextExplainer:
     """Class to explain classification results of FastText.
     Assumes that we already have a trained FastText model with which to make predictions."""
     def __init__(self, path_to_model: str) -> None:
+        "Input fastText trained sentiment model"
         import fasttext
         self.classifier = fasttext.load_model(path_to_model)
 
@@ -87,6 +89,7 @@ class FlairExplainer:
     """Class to explain classification results of Flair.
     Assumes that we already have a trained Flair model with which to make predictions."""
     def __init__(self, path_to_model: str) -> None:
+        "Input Flair trained sentiment model"
         from flair.models import TextClassifier
         self.classifier = TextClassifier.load(path_to_model)
 
@@ -134,7 +137,7 @@ def main(method: str,
         text,
         classifier_fn=predictor,
         top_labels=1,
-        num_features=10,
+        num_features=20,
     )
     return exp
 
@@ -143,7 +146,7 @@ if __name__ == "__main__":
     # Evaluation text
     samples = [
         "It 's not horrible , just horribly mediocre .",
-        "Light , cute and forgettable .",
+        "The cast is uniformly excellent ... but the film itself is merely mildly charming .",
     ]
 
     # Get list of available methods:

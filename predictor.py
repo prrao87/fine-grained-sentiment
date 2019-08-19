@@ -4,8 +4,8 @@ Run fine-grained sentiment classifier based on chosen method
 import argparse
 import os
 from typing import Tuple, Any
-from plot_utils import plot_confusion_matrix
-from models import *
+from plotter import plot_confusion_matrix
+from classifiers import *
 
 # Path to train & test data
 TRAIN_PATH = "data/sst/sst_train.txt"

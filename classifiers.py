@@ -33,7 +33,7 @@ class TextBlobSentiment(Base):
     https://textblob.readthedocs.io/en/dev/
     """
     def __init__(self, model_file: str=None) -> None:
-        pass
+        super().__init__()
 
     def score(self, text: str) -> float:
         # pip install textblob
@@ -41,7 +41,7 @@ class TextBlobSentiment(Base):
         return TextBlob(text).sentiment.polarity
 
     def predict(self, train_file: None, test_file: str, lower_case: bool) -> pd.DataFrame:
-        df = super().read_data(test_file, lower_case)
+        df = self.read_data(test_file, lower_case)
         df['score'] = df['text'].apply(self.score)
         # Convert float score to category based on binning
         df['pred'] = pd.cut(df['score'],
@@ -57,6 +57,7 @@ class VaderSentiment(Base):
     https://www.nltk.org/_modules/nltk/sentiment/vader.html
     """
     def __init__(self, model_file: str=None) -> None:
+        super().__init__()
         # pip install nltk
         # python > import nltk > nltk.download() > d > vader_lexicon
         from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -66,7 +67,7 @@ class VaderSentiment(Base):
         return self.vader.polarity_scores(text)['compound']
 
     def predict(self, train_file: None, test_file: str, lower_case: bool) -> pd.DataFrame:
-        df = super().read_data(test_file, lower_case)
+        df = self.read_data(test_file, lower_case)
         df['score'] = df['text'].apply(self.score)
         # Convert float score to category based on binning
         df['pred'] = pd.cut(df['score'],
@@ -81,6 +82,7 @@ class LogisticRegressionSentiment(Base):
     Uses a sklearn pipeline.
     """
     def __init__(self, model_file: str=None) -> None:
+        super().__init__()
         # pip install sklearn
         from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
         from sklearn.linear_model import LogisticRegression
@@ -95,10 +97,10 @@ class LogisticRegressionSentiment(Base):
 
     def predict(self, train_file: str, test_file: str, lower_case: bool) -> pd.DataFrame:
         "Train model using sklearn pipeline"
-        train_df = super().read_data(train_file, lower_case)
+        train_df = self.read_data(train_file, lower_case)
         learner = self.pipeline.fit(train_df['text'], train_df['truth'])
         # Fit the learner to the test data
-        test_df = super().read_data(test_file, lower_case)
+        test_df = self.read_data(test_file, lower_case)
         test_df['pred'] = learner.predict(test_df['text'])
         return test_df
 
@@ -108,6 +110,7 @@ class SVMSentiment(Base):
     Uses a sklearn pipeline.
     """
     def __init__(self, model_file: str=None) -> None:
+        super().__init__()
         # pip install sklearn
         from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
         from sklearn.linear_model import SGDClassifier
@@ -129,10 +132,10 @@ class SVMSentiment(Base):
 
     def predict(self, train_file: str, test_file: str, lower_case: bool) -> pd.DataFrame:
         "Train model using sklearn pipeline"
-        train_df = super().read_data(train_file, lower_case)
+        train_df = self.read_data(train_file, lower_case)
         learner = self.pipeline.fit(train_df['text'], train_df['truth'])
         # Fit the learner to the test data
-        test_df = super().read_data(test_file, lower_case)
+        test_df = self.read_data(test_file, lower_case)
         test_df['pred'] = learner.predict(test_df['text'])
         return test_df
 
@@ -199,7 +202,7 @@ class FlairSentiment(Base):
 class TransformerSentiment(Base):
     """Predict sentiment scores using a causal transformer.
     Code for training/evaluating the transformer is as per the NAACL transfer learning repository.
-    https://github.com/prrao87/naacl_transfer_learning_tutorial
+    https://github.com/huggingface/naacl_transfer_learning_tutorial
     """
     def __init__(self, model_file: str=None) -> None:
         super().__init__()
@@ -243,7 +246,9 @@ class TransformerSentiment(Base):
                                 padding_mask=(tensor == pad_token))
         val, _ = torch.max(logits, 0)
         val = F.softmax(val, dim=0).detach().cpu().numpy()
-        pred = int(val.argmax()) + 1  # Convert zero-index back to original 1-index for comparison
+        # To train the transformer in Pytorch we zero-indexed the labels.
+        # Now we increment the predicted label by 1 to match with the input data labels.
+        pred = int(val.argmax()) + 1  
         return pred
 
     def predict(self, train_file: None, test_file: str, lower_case: bool) -> pd.DataFrame:

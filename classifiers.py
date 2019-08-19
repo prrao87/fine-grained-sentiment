@@ -223,9 +223,9 @@ class TransformerSentiment(Base):
                                     map_location=self.device)
             self.model.load_state_dict(state_dict)
             self.tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
-        except ValueError:
-            raise Exception("Require a valid transformer model file (model_weights.pth) \
-                            and its config file (model_training_args.bin) in '{}'."
+        except:
+            raise Exception("Require a valid transformer model file ({0}/model_weights.pth) "
+                            "and its config file ({0}/model_training_args.bin)."
                             .format(model_file))
 
     def score(self, text: str) -> int:
@@ -246,9 +246,9 @@ class TransformerSentiment(Base):
                                 padding_mask=(tensor == pad_token))
         val, _ = torch.max(logits, 0)
         val = F.softmax(val, dim=0).detach().cpu().numpy()
-        # To train the transformer in Pytorch we zero-indexed the labels.
-        # Now we increment the predicted label by 1 to match with the input data labels.
-        pred = int(val.argmax()) + 1  
+        # To train the transformer in PyTorch we zero-indexed the labels.
+        # Now we increment the predicted label by 1 to match with those from other classifiers.
+        pred = int(val.argmax()) + 1
         return pred
 
     def predict(self, train_file: None, test_file: str, lower_case: bool) -> pd.DataFrame:

@@ -65,9 +65,9 @@ To run the model with adapters, i.e. bottleneck layers (inserted within skip-con
 
 ## Run sentiment analysis and output confusion matrix
  
-Once the classifiers have been trained on the SST-5 data, run the file ```run_classifiers.py``` to perform 5-class sentiment classification on the test set. This file accepts arguments for multiple classifier models at a time (just space-separate the model names, all in lower case). The requested classification models are run and evaluated on the test set and confusion matrix plots are output (for each model) in the `./Plots/` directory.
+Once the classifiers have been trained on the SST-5 data, run the file ```predictor.py``` to perform 5-class sentiment classification on the test set. This file accepts arguments for multiple classifier models at a time (just space-separate the model names, all in lower case). The requested classification models are run and evaluated on the test set and confusion matrix plots are output (for each model) in the `./Plots/` directory.
 
-The method class and classifier model specification can be done using the dictionary within the file `run_classifiers.py`. The rule-based and linear models do not have trained models associated with them, hence they are left as `None`. For any other learning-based models, the trained model file can be specified in this dictionary to avoid having to pass it as an argument. 
+The method class and classifier model specification can be done using the dictionary within the file `predictor.py`. The rule-based and linear models do not have trained models associated with them, hence they are left as `None`. For any other learning-based models, the trained model file can be specified in this dictionary to avoid having to pass it as an argument. 
 
     METHODS = {
         'textblob': {
@@ -100,21 +100,21 @@ The above dictionary makes it easier to update the framework with more models an
 
 To run a single case just pass one method as an argument:
  
-    python3 run_classifiers.py --method textblob
+    python3 predictor.py --method textblob
 
 All methods from the dictionary can be run sequentially as follows:
 
-    python3 run_classifiers.py --method textblob vader logistic svm fasttext flair
+    python3 predictor.py --method textblob vader logistic svm fasttext flair
 
 If at a later time, multiple versions of trained models need to be run sequentially, we can specify these using the `--model` argument.
 
-    python3 run_classifiers.py --method fasttext --model models/fasttext/sst-bigram.bin
-    python3 run_classifiers.py --method fasttext --model models/fasttext/sst-trigram.bin
+    python3 predictor.py --method fasttext --model models/fasttext/sst-bigram.bin
+    python3 predictor.py --method fasttext --model models/fasttext/sst-trigram.bin
 
 OR 
 
-    python3 run_classifiers.py --method flair --model models/flair/best-model-elmo.pt
-    python3 run_classifiers.py --method flair --model models/flair/best-model-glove.pt
+    python3 predictor.py --method flair --model models/flair/best-model-elmo.pt
+    python3 predictor.py --method flair --model models/flair/best-model-glove.pt
 
 ## Explain classifier results
 

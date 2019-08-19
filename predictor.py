@@ -38,6 +38,10 @@ METHODS = {
         'class': "FlairSentiment",
         'model': "models/flair/best-model.pt"
     },
+    'transformer': {
+        'class': "TransformerSentiment",
+        'model': "models/transformer",
+    }
 }
 
 

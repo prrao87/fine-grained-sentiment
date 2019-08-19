@@ -69,7 +69,7 @@ def train():
     parser.add_argument("--max_norm", type=float, default=1.0, help="Clipping gradient norm")
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay")
     parser.add_argument("--n_epochs", type=int, default=3, help="Number of training epochs")
-    parser.add_argument("--gradient_acc_steps", type=int, default=1, help="Number of update steps to accumulate before a backward pass.")
+    parser.add_argument("--gradient_acc_steps", type=int, default=2, help="Number of update steps to accumulate before a backward pass.")
     parser.add_argument("--init_range", type=float, default=0.02, help="Normal initialization standard deviation")
 
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")

@@ -142,6 +142,7 @@ class FastTextSentiment(Base):
     https://fasttext.cc/
     """
     def __init__(self, model_file: str=None) -> None:
+        super().__init__()
         # pip install fasttext
         import fasttext
         try:
@@ -150,14 +151,14 @@ class FastTextSentiment(Base):
             raise Exception("Please specify a valid trained FastText model file (.bin or .ftz extension)'{}'."
                             .format(model_file))
 
-    def score(self, text: str) -> float:
+    def score(self, text: str) -> int:
         # Predict just the top label (hence 1 index below)
         labels, probabilities = self.model.predict(text, 1)
         pred = int(labels[0][-1])
         return pred
 
     def predict(self, train_file: None, test_file: str, lower_case: bool) -> pd.DataFrame:
-        df = super().read_data(test_file, lower_case)
+        df = self.read_data(test_file, lower_case)
         df['pred'] = df['text'].apply(self.score)
         return df
 
@@ -168,6 +169,7 @@ class FlairSentiment(Base):
     Tested on Flair version 0.4.2+ and Python 3.6+
     """
     def __init__(self, model_file: str=None) -> None:
+        super().__init__()
         "Use the latest version of Flair NLP from their GitHub repo!"
         # pip install flair
         from flair.models import TextClassifier
@@ -177,7 +179,7 @@ class FlairSentiment(Base):
             raise Exception("Please specify a valid trained Flair PyTorch model file (.pt extension)'{}'."
                             .format(model_file))
 
-    def score(self, text: str) -> float:
+    def score(self, text: str) -> int:
         from flair.data import Sentence
         doc = Sentence(text)
         self.model.predict(doc)
@@ -189,6 +191,66 @@ class FlairSentiment(Base):
         # pip install tqdm
         from tqdm import tqdm
         tqdm.pandas()
-        df = super().read_data(test_file, lower_case)
+        df = self.read_data(test_file, lower_case)
+        df['pred'] = df['text'].progress_apply(self.score)
+        return df
+
+
+class TransformerSentiment(Base):
+    """Predict sentiment scores using a causal transformer.
+    Code for training/evaluating the transformer is as per the NAACL transfer learning repository.
+    https://github.com/prrao87/naacl_transfer_learning_tutorial
+    """
+    def __init__(self, model_file: str=None) -> None:
+        super().__init__()
+        "Requires the BertTokenizer from pytorch_transformers"
+        # pip install pytorch_transformers
+        import os
+        import sys
+        import torch
+        from pytorch_transformers import BertTokenizer, cached_path
+        sys.path.append(os.path.abspath('training/transformer_utils'))
+        from model import TransformerWithClfHeadAndAdapters
+        try:
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            self.config = torch.load(cached_path(os.path.join(model_file, "model_training_args.bin")))
+            self.model = TransformerWithClfHeadAndAdapters(self.config["config"],
+                                                           self.config["config_ft"]).to(self.device)
+            state_dict = torch.load(cached_path(os.path.join(model_file, "model_weights.pth")),
+                                    map_location=self.device)
+            self.model.load_state_dict(state_dict)
+            self.tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
+        except ValueError:
+            raise Exception("Require a valid transformer model file (model_weights.pth) \
+                            and its config file (model_training_args.bin) in '{}'."
+                            .format(model_file))
+
+    def score(self, text: str) -> int:
+        "Return an integer value of predicted class from the transformer model."
+        import torch
+        import torch.nn.functional as F
+        self.model.eval()
+        clf_token = self.tokenizer.vocab['[CLS]']  # classifier token
+        pad_token = self.tokenizer.vocab['[PAD]']  # pad token
+        tok = self.tokenizer.tokenize(text)
+        ids = self.tokenizer.convert_tokens_to_ids(tok) + [clf_token]
+        with torch.no_grad():
+            tensor = torch.tensor(ids, dtype=torch.long).to(self.device)
+            tensor = tensor.reshape(1, -1)
+            tensor_in = tensor.transpose(0, 1).contiguous()  # [S, 1]
+            logits = self.model(tensor_in,
+                                clf_tokens_mask=(tensor_in == clf_token),
+                                padding_mask=(tensor == pad_token))
+        val, _ = torch.max(logits, 0)
+        val = F.softmax(val, dim=0).detach().cpu().numpy()
+        pred = int(val.argmax()) + 1  # Convert zero-index back to original 1-index for comparison
+        return pred
+
+    def predict(self, train_file: None, test_file: str, lower_case: bool) -> pd.DataFrame:
+        "Use tqdm to display model prediction status bar"
+        # pip install tqdm
+        from tqdm import tqdm
+        tqdm.pandas()
+        df = self.read_data(test_file, lower_case)
         df['pred'] = df['text'].progress_apply(self.score)
         return df

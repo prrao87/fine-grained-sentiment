@@ -1,12 +1,13 @@
 pytreebank==0.2.6
 tqdm==4.32.1
 cython==0.29.3
-pandas==0.25.0
+pandas==0.24.2
 nltk==3.4.3
 textblob==0.15.3
-pytorch==1.2.0
+pytorch==1.1.0
 pytorch-ignite==0.2.0
 pytorch-transformers==1.0.0
 fasttext==0.9.1
 lime==0.1.1.36
 # flair==0.4.2    # If not using flair, include this line
+# allennlp==0.8.4  # If using flair + elmo embeddings

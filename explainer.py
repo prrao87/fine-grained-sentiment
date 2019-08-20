@@ -11,6 +11,10 @@ METHODS = {
         'class': "LogisticExplainer",
         'file': "data/sst/sst_train.txt"
     },
+    'svm': {
+        'class': "SVMExplainer",
+        'file': "data/sst/sst_train.txt"
+    },
     'fasttext': {
         'class': "FastTextExplainer",
         'file': "models/fasttext/sst.bin"
@@ -19,6 +23,10 @@ METHODS = {
         'class': "FlairExplainer",
         'file': "models/flair/best-model-elmo.pt"
     },
+    'transformer': {
+        'class': "TransformerExplainer",
+        'file': "models/transformer"
+    }
 }
 
 
@@ -30,8 +38,9 @@ def explainer_class(method: str, filename: str) -> Any:
 
 
 class LogisticExplainer:
-    """Class to explain classification results of a scikit-learn 
-    Logistic Regression Pipeline. The model is trained within this class."""
+    """Class to explain classification results of a scikit-learn
+       Logistic Regression Pipeline. The model is trained within this class.
+    """
     def __init__(self, path_to_train_data: str) -> None:
         "Input training data path for training Logistic Regression classifier"
         import pandas as pd
@@ -57,7 +66,51 @@ class LogisticExplainer:
         classifier = pipeline.fit(self.train_df['text'], self.train_df['truth'])
         return classifier
 
-    def predict(self, texts: List[str]) -> np.array:
+    def predict(self, texts: List[str]) -> np.array([float, ...]):
+        """Generate an array of predicted scores (probabilities) from sklearn
+        Logistic Regression Pipeline."""
+        classifier = self.train()
+        probs = classifier.predict_proba(texts)
+        return probs
+
+
+class SVMExplainer:
+    """Class to explain classification results of a scikit-learn linear Support Vector Machine
+       (SVM) Pipeline. The model is trained within this class.
+    """
+    def __init__(self, path_to_train_data: str) -> None:
+        "Input training data path for training Logistic Regression classifier"
+        import pandas as pd
+        # Read in training data set
+        self.train_df = pd.read_csv(path_to_train_data, sep='\t', header=None, names=["truth", "text"])
+        self.train_df['truth'] = self.train_df['truth'].str.replace('__label__', '')
+        # Categorical data type for truth labels
+        self.train_df['truth'] = self.train_df['truth'].astype(int).astype('category')
+
+    def train(self) -> sklearn.pipeline.Pipeline:
+        "Create sklearn logistic regression model pipeline"
+        from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+        from sklearn.linear_model import SGDClassifier
+        from sklearn.pipeline import Pipeline
+        pipeline = Pipeline(
+            [
+                ('vect', CountVectorizer()),
+                ('tfidf', TfidfTransformer()),
+                ('clf', SGDClassifier(
+                    loss='modified_huber',
+                    penalty='l2',
+                    alpha=1e-3,
+                    random_state=42,
+                    max_iter=100,
+                    tol=None,
+                )),
+            ]
+        )
+        # Train model
+        classifier = pipeline.fit(self.train_df['text'], self.train_df['truth'])
+        return classifier
+
+    def predict(self, texts: List[str]) -> np.array([float, ...]):
         """Generate an array of predicted scores (probabilities) from sklearn
         Logistic Regression Pipeline."""
         classifier = self.train()
@@ -67,13 +120,14 @@ class LogisticExplainer:
 
 class FastTextExplainer:
     """Class to explain classification results of FastText.
-    Assumes that we already have a trained FastText model with which to make predictions."""
+       Assumes that we already have a trained FastText model with which to make predictions.
+    """
     def __init__(self, path_to_model: str) -> None:
         "Input fastText trained sentiment model"
         import fasttext
         self.classifier = fasttext.load_model(path_to_model)
 
-    def predict(self, texts: List[str]) -> np.array:
+    def predict(self, texts: List[str]) -> np.array([float, ...]):
         "Generate an array of predicted scores using the FastText"
         labels, probs = self.classifier.predict(texts, 5)
 
@@ -87,13 +141,14 @@ class FastTextExplainer:
 
 class FlairExplainer:
     """Class to explain classification results of Flair.
-    Assumes that we already have a trained Flair model with which to make predictions."""
+       Assumes that we already have a trained Flair model with which to make predictions.
+    """
     def __init__(self, path_to_model: str) -> None:
         "Input Flair trained sentiment model"
         from flair.models import TextClassifier
         self.classifier = TextClassifier.load(path_to_model)
 
-    def predict(self, texts: List[str]) -> np.array:
+    def predict(self, texts: List[str]) -> np.array([float, ...]):
         "Generate an array of predicted scores using the Flair NLP library"
         from flair.data import Sentence
         labels, probs = [], []
@@ -111,6 +166,61 @@ class FlairExplainer:
             order = np.argsort(np.array(label))
             result.append(prob[order])
         return np.array(result)
+
+
+class TransformerExplainer:
+    """Class to explain classification results of the causal transformer.
+       Assumes that we already have a trained transformer model with which to make predictions.
+       Code for training/evaluating the transformer is as per the NAACL transfer learning repository.
+       https://github.com/huggingface/naacl_transfer_learning_tutorial
+    """
+    def __init__(self, model_file: str=None) -> None:
+        "Requires the BertTokenizer from pytorch_transformers"
+        # pip install pytorch_transformers
+        import os
+        import sys
+        import torch
+        from pytorch_transformers import BertTokenizer, cached_path
+        sys.path.append(os.path.abspath('training/transformer_utils'))
+        from model import TransformerWithClfHeadAndAdapters
+        try:
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            self.config = torch.load(cached_path(os.path.join(model_file, "model_training_args.bin")))
+            self.model = TransformerWithClfHeadAndAdapters(self.config["config"],
+                                                           self.config["config_ft"]).to(self.device)
+            state_dict = torch.load(cached_path(os.path.join(model_file, "model_weights.pth")),
+                                    map_location=self.device)
+            self.model.load_state_dict(state_dict)
+            self.tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
+        except:
+            raise Exception("Require a valid transformer model file ({0}/model_weights.pth) "
+                            "and its config file ({0}/model_training_args.bin)."
+                            .format(model_file))
+
+    def predict(self, texts: List[str]) -> np.array([float, ...]):
+        "Return an integer value of predicted class from the transformer model."
+        import torch
+        import torch.nn.functional as F
+
+        self.model.eval()  # Switch to model evaluation mode
+        clf_token = self.tokenizer.vocab['[CLS]']  # classifier token
+        pad_token = self.tokenizer.vocab['[PAD]']  # pad token
+
+        probs = []  # Process each text and get softmax probabilities
+        for text in tqdm(texts):
+            tok = self.tokenizer.tokenize(text)
+            ids = self.tokenizer.convert_tokens_to_ids(tok) + [clf_token]
+            with torch.no_grad():
+                tensor = torch.tensor(ids, dtype=torch.long).to(self.device)
+                tensor = tensor.reshape(1, -1)
+                tensor_in = tensor.transpose(0, 1).contiguous()  # [S, 1]
+                logits = self.model(tensor_in,
+                                    clf_tokens_mask=(tensor_in == clf_token),
+                                    padding_mask=(tensor == pad_token))
+            val, _ = torch.max(logits, 0)
+            val = F.softmax(val, dim=0).detach().cpu().numpy()
+            probs.append(val)
+        return np.array(probs)
 
 
 def main(method: str,
@@ -164,10 +274,10 @@ if __name__ == "__main__":
             parser.error("Please choose from the below existing methods! \n{}".format(", ".join(method_list)))
         path_to_file = METHODS[method]['file']
         # Run explainer function
+        print("Method: {}".format(method.upper()))
         for i, text in enumerate(samples):
+            print("Generating LIME explanation for example {}: `{}`".format(i+1, text))
             exp = main(method, path_to_file, text)
-
             # Output to HTML
             output_filename = Path(__file__).parent / "{}-explanation-{}.html".format(i+1, method)
             exp.save_to_file(output_filename)
-            print("{}: Output explainer data {} to HTML".format(method.upper(), i+1))

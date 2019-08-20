@@ -25,7 +25,7 @@ For further development, simply activate the existing virtual environment.
 
 ## Training the Classifiers
 
-The training of the linear models (Logistic Regression and SVM) are done during runtime of the classifier (next step) since it requires very little tuning. To train the methods that rely on word/document embeddings, however, we use separate scripts to help more easily tune the hyperparameters. 
+The training of the linear models (Logistic Regression and SVM) are done during runtime of the classifier (next step) since it requires very little tuning. To train the methods that rely on word/string embeddings, however, we use separate scripts to help more easily tune the hyperparameters. 
 
 Training code for the models is provided in the `training` directory. 
 
@@ -60,7 +60,9 @@ Train the causal transformer (fine-tuning for classification only) as shown belo
     cd training
     python3 train_transformer.py --n_epochs 3 --lr 6.5e-5 --gradient_acc_steps 2
 
-To run the model with adapters, i.e. bottleneck layers (inserted within skip-connections just after the attention and feed-forward modules), use the `adapters_dim` argument. This will **only** train the adapters, linear layers and the added embeddings, while keeping the other parameters **frozen**. In the below example, we include adapters with a dimensionality of 32 - adding this argument will reduce the number of trainable parameters in the model to 25% of the original (around 12 million). Note that we **scale up the learning rate by a factor of 10** when using adapters because we added a number of newly initialized parameters to the pre-trained model.
+To run the model with adapters, i.e. bottleneck layers (inserted within skip-connections just after the attention and feed-forward modules), use the `adapters_dim` argument. This will **only** train the adapters, linear layers and the added embeddings, while keeping the other parameters **frozen**. 
+
+In the below example, we include adapters with a dimensionality of 32 - adding this argument will reduce the number of trainable parameters in the model to 25% of the original (around 12 million). Note that we **scale up the learning rate by a factor of 10** when using adapters because we added a number of newly initialized parameters to the pre-trained model. Gradients are accumulated over two steps to simulate larger batch sizes, which helps bring down the losses faster. 
 
     python3 train_transformer.py --adapters_dim 32 --n_epochs 3 --lr 6.5e-4 --gradient_acc_steps 2
 
@@ -103,7 +105,7 @@ The method class and classifier model specification can be done using the dictio
         }
     }
 
-The above dictionary makes it easier to update the framework with more models and methods over time - simply update the method name and its class names and models files as shown above. 
+The above dictionary makes it easier to update the framework with more models and methods over time - simply update the method name and its class names and models files as shown above.
 
 To run a single case just pass one method as an argument:
  
@@ -113,7 +115,7 @@ All methods from the dictionary can be run sequentially as follows:
 
     python3 predictor.py --method textblob vader logistic svm fasttext flair
 
-If at a later time, multiple versions of trained models need to be run sequentially, we can specify these using the `--model` argument.
+If at a later time, multiple versions of trained models need to be run sequentially, we can specify these using the `--model` argument - **this will override the model specified in the dictionary within the file**.
 
     python3 predictor.py --method fasttext --model models/fasttext/sst-bigram.bin
     python3 predictor.py --method fasttext --model models/fasttext/sst-trigram.bin
@@ -129,7 +131,7 @@ To run the predictor for a new transformer model, simply specify the model path.
 
 ## Explain classifier results
 
-Once a sentiment classifier has been trained, we can use it to explain the classifier's predictions. To do this we make use of the [LIME library](https://github.com/marcotcr/lime). The LIME method generates a local linear approximation of the model (regardless of whether the model is *globally* nonlinear or not), and then perturbs this local model to identify features that influence the classification results the most. For multi-class cases such as this one, LIME produces a list of probabilities for each class, and also highlights the effect of each token feature's on the predicted class using a [one-vs-rest method](https://en.wikipedia.org/wiki/Multiclass_classification#One-vs.-rest).
+Once a sentiment classifier has been trained, we can use it to explain the classifier's predictions. To do this we make use of the [LIME library](https://github.com/marcotcr/lime). The LIME method generates a local linear approximation of the model (regardless of whether the model is *globally* nonlinear or not), and then perturbs this local model to identify features that influence the classification results the most. For multi-class cases such as this one, LIME produces a list of probabilities for each class, and also highlights the effect of each token feature on the predicted class using a [one-vs-rest method](https://en.wikipedia.org/wiki/Multiclass_classification#One-vs.-rest).
 
 To make it easier to update the explainer framework with more methods over time, look at the method dictionary in `explainer.py`.
 
@@ -156,8 +158,8 @@ To make it easier to update the explainer framework with more methods over time,
         }
     }
 **Note**: 
-- For the logistic regression, we specify the path to the training data (the logistic regression model is trained within the explainer class) while for the other learners we point to the trained classifier models directly. 
-- For the transformer, we specify just the model path (with the metadata and model file in that path).
+- For the logistic regression, we specify the path to the *training data* (the logistic regression model is trained within the explainer class) while for the other learners we point to the trained classifier models directly. 
+- For the transformer, we specify just the *model path* (with the metadata and model file in that path).
 
 The sentences whose classification results are to be explained are specified as a list in `explainer.py`. 
 

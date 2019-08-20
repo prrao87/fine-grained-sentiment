@@ -124,7 +124,7 @@ class SVMSentiment(Base):
                     penalty='l2',
                     alpha=1e-3,
                     random_state=42,
-                    max_iter=5,
+                    max_iter=100,
                     tol=None,
                 )),
             ]

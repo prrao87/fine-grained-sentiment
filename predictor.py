@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument('--method', type=str, nargs='+', help="Enter one or more methods \
                         (Choose from following: {})".format(", ".join(method_list)),
                         required=True)
-    parser.add_argument('--model', type=str, help="Trained classifier model file (str)", default=None)
+    parser.add_argument('--model', type=str, help="Trained classifier model file or path (str)", default=None)
     parser.add_argument('--lower', action="store_true", help="Flag to convert test data strings \
                         to lower case (for lower-case trained classifiers)")
     args = parser.parse_args()

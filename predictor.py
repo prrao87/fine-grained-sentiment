@@ -107,5 +107,5 @@ if __name__ == "__main__":
             raise Exception("Incorrect method specification. Please choose from existing methods!\n{}"
                             .format(", ".join(method_list)))
 
-        print("--\nRunning {} classifier".format(method))
+        print("--\nRunning {} classifier on test data.".format(method))
         run_classifier(files, method, method_class, model_file, lower_case)

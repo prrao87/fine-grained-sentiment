@@ -106,7 +106,7 @@ class LogisticRegressionSentiment(Base):
 
 
 class SVMSentiment(Base):
-    """Predict sentiment scores using a linear Suppoer Vector Machine (SVM).
+    """Predict sentiment scores using a linear Support Vector Machine (SVM).
     Uses a sklearn pipeline.
     """
     def __init__(self, model_file: str=None) -> None:
@@ -120,7 +120,7 @@ class SVMSentiment(Base):
                 ('vect', CountVectorizer()),
                 ('tfidf', TfidfTransformer()),
                 ('clf', SGDClassifier(
-                    loss='hinge',
+                    loss='modified_huber',
                     penalty='l2',
                     alpha=1e-3,
                     random_state=42,
@@ -204,7 +204,7 @@ class TransformerSentiment(Base):
     Code for training/evaluating the transformer is as per the NAACL transfer learning repository.
     https://github.com/huggingface/naacl_transfer_learning_tutorial
     """
-    def __init__(self, model_file: str=None) -> None:
+    def __init__(self, model_path: str=None) -> None:
         super().__init__()
         "Requires the BertTokenizer from pytorch_transformers"
         # pip install pytorch_transformers
@@ -216,17 +216,17 @@ class TransformerSentiment(Base):
         from model import TransformerWithClfHeadAndAdapters
         try:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-            self.config = torch.load(cached_path(os.path.join(model_file, "model_training_args.bin")))
+            self.config = torch.load(cached_path(os.path.join(model_path, "model_training_args.bin")))
             self.model = TransformerWithClfHeadAndAdapters(self.config["config"],
                                                            self.config["config_ft"]).to(self.device)
-            state_dict = torch.load(cached_path(os.path.join(model_file, "model_weights.pth")),
+            state_dict = torch.load(cached_path(os.path.join(model_path, "model_weights.pth")),
                                     map_location=self.device)
             self.model.load_state_dict(state_dict)
             self.tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False)
         except:
             raise Exception("Require a valid transformer model file ({0}/model_weights.pth) "
                             "and its config file ({0}/model_training_args.bin)."
-                            .format(model_file))
+                            .format(model_path))
 
     def score(self, text: str) -> int:
         "Return an integer value of predicted class from the transformer model."

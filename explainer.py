@@ -7,6 +7,14 @@ from lime.lime_text import LimeTextExplainer
 from tqdm import tqdm
 
 METHODS = {
+    'textblob': {
+        'class': "TextBlobExplainer",
+        'file': None
+    },
+    'vader': {
+        'class': "VaderExplainer",
+        'file': None
+    },
     'logistic': {
         'class': "LogisticExplainer",
         'file': "data/sst/sst_train.txt"
@@ -17,7 +25,7 @@ METHODS = {
     },
     'fasttext': {
         'class': "FastTextExplainer",
-        'file': "models/fasttext/sst.bin"
+        'file': "models/fasttext/sst-5.ftz"
     },
     'flair': {
         'class': "FlairExplainer",
@@ -35,6 +43,68 @@ def explainer_class(method: str, filename: str) -> Any:
     classname = METHODS[method]['class']
     class_ = globals()[classname]
     return class_(filename)
+
+
+class TextBlobExplainer:
+    """Class to explain classification results of TextBlob.
+       Although Textblob is rule-based, we `simulate` the probabilities that the model
+       predicts by binning the float scores in the range of the classes [1, 2, 3, 4, 5]
+       and using a normal distribution to artificially create class probabilities.
+
+       For example:
+       If TextBlob predicts a float sentiment score of 0.2354, this translates to an 
+       integer-scaled class prediction of 2, assuming equally-sized bins in [1, 2, 3, 4, 5].
+       We take this value and generate a normal distribution PDF with exactly 5 values.
+       The PDF is used as a simulated probability of classes that we feed to the LIME explainer.
+    """
+    def __init__(self, model_file: str = None, classes=[1, 2, 3, 4, 5]) -> None:
+        self.classes = classes
+
+    def score(self, text: str) -> float:
+        # pip install textblob
+        from textblob import TextBlob
+        return TextBlob(text).sentiment.polarity
+
+    def predict(self, texts: List[str]) -> np.array([float, ...]):
+        probs = []
+        for text in texts:
+            # Convert float score in [0, 1] to an integer value in the range [1, 5]
+            binned = np.digitize(5 * self.score(text), np.array([1, 2, 3, 4, 5])) + 1
+            # Similate probabilities of each class based on a normal distribution
+            simulated_probs = scipy.stats.norm.pdf(np.array(self.classes), binned, scale=0.5)
+            probs.append(simulated_probs)
+        return np.array(probs)
+
+
+class VaderExplainer:
+    """Class to explain classification results of Vader.
+       Although Vader is rule-based, we `simulate` the probabilities that the model
+       predicts by binning the float scores in the range of the classes [1, 2, 3, 4, 5]
+       and using a normal distribution to artificially create class probabilities.
+
+       For example:
+       If Vader predicts a float sentiment score of 0.6834, this translates to an
+       integer-scaled class prediction of 4, assuming equally-sized bins in [1, 2, 3, 4, 5].
+       We take this value and generate a normal distribution PDF with exactly 5 values.
+       The PDF is used as a simulated probability of classes that we feed to the LIME explainer.
+    """
+    def __init__(self, model_file: str = None, classes=[1, 2, 3, 4, 5]) -> None:
+        from nltk.sentiment.vader import SentimentIntensityAnalyzer
+        self.vader = SentimentIntensityAnalyzer()
+        self.classes = classes
+
+    def score(self, text: str) -> float:
+        return self.vader.polarity_scores(text)['compound']
+
+    def predict(self, texts: List[str]) -> np.array([float, ...]):
+        probs = []
+        for text in texts:
+            # Convert float score in [0, 1] to an integer value in the range [1, 5]
+            binned = np.digitize(5 * self.score(text), np.array([1, 2, 3, 4, 5])) + 1
+            # Similate probabilities of each class based on a normal distribution
+            simulated_probs = scipy.stats.norm.pdf(np.array(self.classes), binned, scale=0.5)
+            probs.append(simulated_probs)
+        return np.array(probs)
 
 
 class LogisticExplainer:

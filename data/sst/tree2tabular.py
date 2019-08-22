@@ -4,7 +4,7 @@ import sys
 import os
 
 out_path = os.path.join(sys.path[0], 'sst_{}.txt')
-dataset = pytreebank.load_sst('./')
+dataset = pytreebank.load_sst('./raw_data')
 
 # Store train, dev and test in separate files
 for category in ['train', 'test', 'dev']:

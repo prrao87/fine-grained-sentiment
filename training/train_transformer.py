@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 All code in this file is as per the NAACL transfer learning tutorial:
-https://github.com/prrao87/naacl_transfer_learning_tutorial
+https://github.com/huggingface/naacl_transfer_learning_tutorial
 """
 import argparse
 import multiprocessing

@@ -1,5 +1,6 @@
 import argparse
 import numpy as np
+import scipy
 import sklearn.pipeline
 from pathlib import Path
 from typing import List, Any
@@ -57,8 +58,8 @@ class TextBlobExplainer:
        We take this value and generate a normal distribution PDF with exactly 5 values.
        The PDF is used as a simulated probability of classes that we feed to the LIME explainer.
     """
-    def __init__(self, model_file: str = None, classes=[1, 2, 3, 4, 5]) -> None:
-        self.classes = classes
+    def __init__(self, model_file: str = None) -> None:
+        self.classes = np.array([1, 2, 3, 4, 5])
 
     def score(self, text: str) -> float:
         # pip install textblob
@@ -69,9 +70,9 @@ class TextBlobExplainer:
         probs = []
         for text in texts:
             # Convert float score in [0, 1] to an integer value in the range [1, 5]
-            binned = np.digitize(5 * self.score(text), np.array([1, 2, 3, 4, 5])) + 1
+            binned = np.digitize(5 * self.score(text), self.classes) + 1
             # Similate probabilities of each class based on a normal distribution
-            simulated_probs = scipy.stats.norm.pdf(np.array(self.classes), binned, scale=0.5)
+            simulated_probs = scipy.stats.norm.pdf(self.classes, binned, scale=0.5)
             probs.append(simulated_probs)
         return np.array(probs)
 
@@ -88,10 +89,10 @@ class VaderExplainer:
        We take this value and generate a normal distribution PDF with exactly 5 values.
        The PDF is used as a simulated probability of classes that we feed to the LIME explainer.
     """
-    def __init__(self, model_file: str = None, classes=[1, 2, 3, 4, 5]) -> None:
+    def __init__(self, model_file: str = None) -> None:
         from nltk.sentiment.vader import SentimentIntensityAnalyzer
         self.vader = SentimentIntensityAnalyzer()
-        self.classes = classes
+        self.classes = np.array([1, 2, 3, 4, 5])
 
     def score(self, text: str) -> float:
         return self.vader.polarity_scores(text)['compound']
@@ -100,9 +101,9 @@ class VaderExplainer:
         probs = []
         for text in texts:
             # Convert float score in [0, 1] to an integer value in the range [1, 5]
-            binned = np.digitize(5 * self.score(text), np.array([1, 2, 3, 4, 5])) + 1
+            binned = np.digitize(5 * self.score(text), self.classes) + 1
             # Similate probabilities of each class based on a normal distribution
-            simulated_probs = scipy.stats.norm.pdf(np.array(self.classes), binned, scale=0.5)
+            simulated_probs = scipy.stats.norm.pdf(self.classes, binned, scale=0.5)
             probs.append(simulated_probs)
         return np.array(probs)
 

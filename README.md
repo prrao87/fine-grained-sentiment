@@ -93,7 +93,7 @@ The method class and classifier model specification can be done using the dictio
         },
         'fasttext': {
             'class': "FastTextSentiment",
-            'model': "models/fasttext/sst.ftz"
+            'model': "models/fasttext/sst-5.ftz"
         },
         'flair': {
             'class': "FlairSentiment",

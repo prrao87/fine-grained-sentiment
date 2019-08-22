@@ -136,6 +136,14 @@ Once a sentiment classifier has been trained, we can use it to explain the class
 To make it easier to update the explainer framework with more methods over time, look at the method dictionary in `explainer.py`.
 
     METHODS = {
+        'textblob': {
+            'class': "TextBlobExplainer",
+            'file': None
+        },
+        'vader': {
+            'class': "VaderExplainer",
+            'file': None
+        },
         'logistic': {
             'class': "LogisticExplainer",
             'file': "data/sst/sst_train.txt"
@@ -146,7 +154,7 @@ To make it easier to update the explainer framework with more methods over time,
         },
         'fasttext': {
             'class': "FastTextExplainer",
-            'file': "models/fasttext/sst.bin"
+            'file': "models/fasttext/sst-5.ftz"
         },
         'flair': {
             'class': "FlairExplainer",
@@ -158,6 +166,7 @@ To make it easier to update the explainer framework with more methods over time,
         }
     }
 **Note**: 
+- The rule-based approaches (TextBlob and Vader) do *not* output class probabilities (they simply output a float score of sentiment in the range `[0, 1]`). To explain these results using LIME, we artificially generate class probabilities for each class using a combination of binning (to get an integer class in the range `[1-5]` depending the float value), and then "simulating" the class probabilities using a normal distribution with the mean equal to the predicted class. *This approach is hacky* and is by no means formal, but it allows us to feed the outputs of TextBlob and Vader as probabilities to the LIME explainer (which is what it expects).
 - For the logistic regression, we specify the path to the *training data* (the logistic regression model is trained within the explainer class) while for the other learners we point to the trained classifier models directly. 
 - For the transformer, we specify just the *model path* (with the metadata and model file in that path).
 
@@ -170,7 +179,7 @@ The sentences whose classification results are to be explained are specified as 
 
 Run the explainer for the list of sentences using each, or all the classification methods as follows:
 
-    python3 explainer.py --method logistic svm fasttext
+    python3 explainer.py --method textblob vader logistic svm fasttext
     python3 explainer.py --method flair
     python3 explainer.py --method transformer
 

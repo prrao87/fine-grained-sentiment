@@ -204,7 +204,7 @@ class FastTextExplainer:
 
         # For each prediction, sort the probability scores in the same order for all texts
         result = []
-        for label, prob, text in zip(labels, probs, texts):
+        for label, prob in zip(labels, probs):
             order = np.argsort(np.array(label))
             result.append(prob[order])
         return np.array(result)
@@ -233,7 +233,7 @@ class FlairExplainer:
 
         # For each prediction, sort the probability scores in the same order for all texts
         result = []
-        for label, prob, text in zip(labels, probs, texts):
+        for label, prob in zip(labels, probs):
             order = np.argsort(np.array(label))
             result.append(prob[order])
         return np.array(result)

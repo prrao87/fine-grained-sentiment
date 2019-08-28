@@ -36,7 +36,7 @@ METHODS = {
     },
     'flair': {
         'class': "FlairSentiment",
-        'model': "models/flair/best-model.pt"
+        'model': "models/flair/best-model-elmo.pt"
     },
     'transformer': {
         'class': "TransformerSentiment",

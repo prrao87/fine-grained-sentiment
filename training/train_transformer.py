@@ -15,7 +15,7 @@ from ignite.metrics import RunningAverage, Accuracy
 from ignite.handlers import ModelCheckpoint
 from ignite.contrib.handlers import PiecewiseLinear, ProgressBar
 sys.path.append(os.path.abspath('transformer_utils'))
-from loader import TextProcessor, read_sst5, create_dataloader
+from loader import TextProcessor, read_sst5
 from model import TransformerWithClfHeadAndAdapters
 
 PRETRAINED_MODEL_URL = "https://s3.amazonaws.com/models.huggingface.co/naacl-2019-tutorial/"
@@ -95,18 +95,18 @@ def train():
     pad_token = tokenizer.vocab['[PAD]']  # pad token
     processor = TextProcessor(tokenizer, label2int, clf_token, pad_token, max_length=config.num_max_positions)
 
-    train_dl = create_dataloader(datasets["train"], processor,
-                                 shuffle=True,
-                                 batch_size=args.train_batch_size,
-                                 valid_pct=None)
+    train_dl = processor.create_dataloader(datasets["train"],
+                                           shuffle=True,
+                                           batch_size=args.train_batch_size,
+                                           valid_pct=None)
 
-    valid_dl = create_dataloader(datasets["dev"], processor,
-                                 batch_size=args.train_batch_size,
-                                 valid_pct=None)
+    valid_dl = processor.create_dataloader(datasets["dev"],
+                                           batch_size=args.train_batch_size,
+                                           valid_pct=None)
 
-    test_dl = create_dataloader(datasets["test"], processor,
-                                batch_size=args.valid_batch_size,
-                                valid_pct=None)
+    test_dl = processor.create_dataloader(datasets["test"],
+                                          batch_size=args.valid_batch_size,
+                                          valid_pct=None)
 
     # Training function and trainer
     def update(engine, batch):

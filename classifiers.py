@@ -24,8 +24,8 @@ class Base:
     def accuracy(self, df: pd.DataFrame) -> None:
         "Prediction accuracy (percentage) and F1 score"
         acc = accuracy_score(df['truth'], df['pred'])*100
-        f1 = f1_score(df['truth'], df['pred'], average='macro')
-        print("Accuracy: {}\nMacro F1-score: {}".format(acc, f1))
+        f1 = f1_score(df['truth'], df['pred'], average='macro')*100
+        print("Accuracy: {:.3f}\nMacro F1-score: {:.3f}".format(acc, f1))
 
 
 class TextBlobSentiment(Base):

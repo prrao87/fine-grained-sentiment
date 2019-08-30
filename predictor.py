@@ -32,7 +32,7 @@ METHODS = {
     },
     'fasttext': {
         'class': "FastTextSentiment",
-        'model': "models/fasttext/sst.bin"
+        'model': "models/fasttext/sst-5.ftz"
     },
     'flair': {
         'class': "FlairSentiment",

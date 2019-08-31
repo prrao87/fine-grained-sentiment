@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Any
 from lime.lime_text import LimeTextExplainer
 from tqdm import tqdm
+import spacy
 
 METHODS = {
     'textblob': {
@@ -39,6 +40,15 @@ METHODS = {
 }
 
 
+def tokenizer(text: str) -> str:
+    "Tokenize input string using a spaCy pipeline"
+    nlp = spacy.blank('en')
+    nlp.add_pipe(nlp.create_pipe('sentencizer'))  # Very basic NLP pipeline in spaCy
+    doc = nlp(text)
+    tokenized_text = ' '.join(token.text for token in doc)
+    return tokenized_text
+
+
 def explainer_class(method: str, filename: str) -> Any:
     "Instantiate class using its string name"
     classname = METHODS[method]['class']
@@ -48,8 +58,8 @@ def explainer_class(method: str, filename: str) -> Any:
 
 class TextBlobExplainer:
     """Class to explain classification results of TextBlob.
-       Although Textblob outputs scores in [-1.0, 1.0], we `simulate` the 
-       probabilities that the model predicts using 5 equally-sized bins in this interval.
+       Although Textblob overall polarity scores are in the range [-1.0, 1.0], we `simulate`
+       the probabilities that the model predicts using 5 equally-sized bins in this interval.
        and using a normal distribution to artificially create class probabilities.
 
        For example:
@@ -83,7 +93,7 @@ class TextBlobExplainer:
 
 class VaderExplainer:
     """Class to explain classification results of Vader.
-       Although VADER outputs scores in [0, 1.0], we `simulate` the 
+       Although VADER compound scores are in the range [-1.0, 1.0], we `simulate` the 
        probabilities that the model predicts using 5 equally-sized bins in this interval.
        and using a normal distribution to artificially create class probabilities.
 
@@ -104,8 +114,10 @@ class VaderExplainer:
     def predict(self, texts: List[str]) -> np.array([float, ...]):
         probs = []
         for text in texts:
+            # First, offset the float score from the range [-1, 1] to a range [0, 1]
+            offset = (self.score(text) + 1) / 2.
             # Convert float score in [0, 1] to an integer value in the range [1, 5]
-            binned = np.digitize(5 * self.score(text), self.classes) + 1
+            binned = np.digitize(5 * offset, self.classes) + 1
             # Similate probabilities of each class based on a normal distribution
             simulated_probs = scipy.stats.norm.pdf(self.classes, binned, scale=0.5)
             probs.append(simulated_probs)
@@ -296,7 +308,7 @@ class TransformerExplainer:
         return np.array(probs)
 
 
-def main(method: str,
+def explainer(method: str,
          path_to_file: str,
          text: str,
          num_samples: int) -> LimeTextExplainer:
@@ -327,13 +339,7 @@ def main(method: str,
     return exp
 
 
-if __name__ == "__main__":
-    # Evaluation text
-    samples = [
-        "It 's not horrible , just horribly mediocre .",
-        # "The cast is uniformly excellent ... but the film itself is merely mildly charming .",
-    ]
-
+def main(samples: List[str]) -> None:
     # Get list of available methods:
     method_list = [method for method in METHODS.keys()]
     # Arguments
@@ -352,8 +358,18 @@ if __name__ == "__main__":
         # Run explainer function
         print("Method: {}".format(method.upper()))
         for i, text in enumerate(samples):
+            text = tokenizer(text)  # Tokenize text using spaCy before explaining
             print("Generating LIME explanation for example {}: `{}`".format(i+1, text))
-            exp = main(method, path_to_file, text, args.num_samples)
+            exp = explainer(method, path_to_file, text, args.num_samples)
             # Output to HTML
             output_filename = Path(__file__).parent / "{}-explanation-{}.html".format(i+1, method)
             exp.save_to_file(output_filename)
+
+
+if __name__ == "__main__":
+    # Evaluation text
+    samples = [
+        "It's not horrible, just horribly mediocre.",
+        "The cast is uniformly excellent ... but the film itself is merely mildly charming.",
+    ]
+    main(samples)

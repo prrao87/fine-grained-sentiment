@@ -9,5 +9,6 @@ pytorch-ignite==0.2.0
 pytorch-transformers==1.0.0
 fasttext==0.9.1
 lime==0.1.1.36
+spacy==2.1.8
 # flair==0.4.2    # If not using flair, include this line
 # allennlp==0.8.4  # If using flair + elmo embeddings

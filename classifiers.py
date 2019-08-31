@@ -215,11 +215,9 @@ class TransformerSentiment(Base):
         "Requires the BertTokenizer from pytorch_transformers"
         # pip install pytorch_transformers
         import os
-        import sys
         import torch
         from pytorch_transformers import BertTokenizer, cached_path
-        sys.path.append(os.path.abspath('training/transformer_utils'))
-        from model import TransformerWithClfHeadAndAdapters
+        from training.transformer_utils.model import TransformerWithClfHeadAndAdapters
         try:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             self.config = torch.load(cached_path(os.path.join(model_path, "model_training_args.bin")))

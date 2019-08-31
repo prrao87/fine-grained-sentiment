@@ -253,11 +253,9 @@ class TransformerExplainer:
         "Requires the BertTokenizer from pytorch_transformers"
         # pip install pytorch_transformers
         import os
-        import sys
         import torch
         from pytorch_transformers import BertTokenizer, cached_path
-        sys.path.append(os.path.abspath('training/transformer_utils'))
-        from model import TransformerWithClfHeadAndAdapters
+        from training.transformer_utils.model import TransformerWithClfHeadAndAdapters
         try:
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             self.config = torch.load(cached_path(os.path.join(model_file, "model_training_args.bin")))
@@ -323,7 +321,7 @@ def main(method: str,
         text,
         classifier_fn=predictor,
         top_labels=1,
-        num_features=5,
+        num_features=20,
         num_samples=num_samples,
     )
     return exp
@@ -333,7 +331,7 @@ if __name__ == "__main__":
     # Evaluation text
     samples = [
         "It 's not horrible , just horribly mediocre .",
-        "The cast is uniformly excellent ... but the film itself is merely mildly charming .",
+        # "The cast is uniformly excellent ... but the film itself is merely mildly charming .",
     ]
 
     # Get list of available methods:
@@ -344,7 +342,7 @@ if __name__ == "__main__":
                         (Choose from following: {})".format(", ".join(method_list)),
                         required=True)
     parser.add_argument('-n', '--num_samples', type=int, help="Number of samples for explainer \
-                        instance", default=2500)
+                        instance", default=1000)
     args = parser.parse_args()
 
     for method in args.method:

@@ -91,7 +91,12 @@ class LogisticRegressionSentiment(Base):
             [
                 ('vect', CountVectorizer()),
                 ('tfidf', TfidfTransformer()),
-                ('clf', LogisticRegression(solver='liblinear', multi_class='auto')),
+                ('clf', LogisticRegression(
+                    solver='newton-cg',
+                    multi_class='multinomial',
+                    random_state=42,
+                    max_iter=100,
+                )),
             ]
         )
 
@@ -120,11 +125,12 @@ class SVMSentiment(Base):
                 ('vect', CountVectorizer()),
                 ('tfidf', TfidfTransformer()),
                 ('clf', SGDClassifier(
-                    loss='modified_huber',
+                    loss='hinge',
                     penalty='l2',
                     alpha=1e-3,
                     random_state=42,
                     max_iter=100,
+                    learning_rate='optimal',
                     tol=None,
                 )),
             ]

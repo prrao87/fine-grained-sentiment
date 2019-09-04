@@ -8,7 +8,7 @@ Currently the following classifiers have been implemented:
  - **SVM**: Trains a simple linear  support vector machine in scikit-learn after converting the vocabulary to feature vectors and considering the effect of word frequencies using TF-IDF.
  - **FastText**: Trains a [FastText](https://fasttext.cc/docs/en/supervised-tutorial.html) classifier using a combination of trigrams and a 3-word context window size.
  - **Flair**: Trains a [Flair NLP](https://github.com/zalandoresearch/flair) classifier using ["stacked" embeddings](https://github.com/zalandoresearch/flair/blob/master/resources/docs/TUTORIAL_7_TRAINING_A_MODEL.md#training-a-text-classification-model), i.e. a combined representation of either GloVe, Bert or ELMo word embeddings and Flair (forward and backward) string embeddings.
- - **Causal Transformer**: Trains a small transformer model based on OpenAI's GPT-2 architecture (but *much* smaller) using a causal (i.e. *left-to-right*) pre-trained language model trained on Wikitext-103 data. The pre-trained weights are obtained from HuggingFace's [NAACL transfer learning tutorial](https://github.com/huggingface/naacl_transfer_learning_tutorial). Once we download the pre-trained language model, we add a custom classification head to the base transformer as shown `training/transformer_utils/model.py`, and then fine-tune it on the SST-5 dataset.
+ - **Causal Transformer**: Trains a small transformer model based on OpenAI's GPT-2 architecture (but *much* smaller) using a causal (i.e. *left-to-right*) pre-trained language model trained on Wikitext-103 data. The pre-trained weights are obtained from HuggingFace's [NAACL transfer learning tutorial](https://github.com/huggingface/naacl_transfer_learning_tutorial). Once we download the pre-trained language model, we add a custom classification head to the base transformer as shown in `training/transformer_utils/model.py`, and then fine-tune it on the SST-5 dataset.
 
 ## Installation
 
@@ -25,7 +25,7 @@ For further development, simply activate the existing virtual environment.
 
 ## Training the Classifiers
 
-The training of the linear models (Logistic Regression and SVM) are done during runtime of the classifier (next step) since it requires very little tuning. To train the methods that rely on word/string embeddings, however, we use separate scripts to help more easily tune the hyperparameters. 
+The training of the linear models (Logistic Regression and SVM) are done during runtime of the classifier (next step) since they run very fast on this small dataset. To train the methods that rely on word/string embeddings, however, we use separate scripts to help more easily tune the hyperparameters. 
 
 Training code for the models is provided in the `training` directory. 
 
@@ -166,15 +166,15 @@ To make it easier to update the explainer framework with more methods over time,
         }
     }
 **Note**: 
-- The rule-based approaches (TextBlob and Vader) do *not* output class probabilities (they simply output a float score of sentiment in the range `[0, 1]`). To explain these results using LIME, we artificially generate class probabilities for each class using a combination of binning (to get an integer class in the range `[1-5]` depending the float value), and then "simulating" the class probabilities using a normal distribution with the mean equal to the predicted class. *This approach is hacky* and is by no means formal, but it allows us to feed the outputs of TextBlob and Vader as probabilities to the LIME explainer (which is what it expects).
-- For the logistic regression, we specify the path to the *training data* (the logistic regression model is trained within the explainer class) while for the other learners we point to the trained classifier models directly. 
-- For the transformer, we specify just the *model path* (with the metadata and model file in that path).
+- The rule-based approaches (TextBlob and Vader) do *not* output class probabilities (they simply output a float score of sentiment in the range `[-1, 1]`). To explain these results using LIME, we artificially generate class probabilities for each class using a combination of binning (to get an integer class in the range `[1-5]` depending the float value), and then "simulating" the class probabilities using a normal distribution with the mean equal to the predicted class. *This approach is hacky* and is by no means formal, but it allows us to feed the outputs of TextBlob and Vader as probabilities to the LIME explainer (which is what it expects).
+- For the logistic regression and SVM, specify the path to the *training data* (the logistic regression model is trained within the explainer class) while for the other learners, point to the trained classifier models directly. 
+- For the transformer, specify just the *model path* (with the metadata and model file in that path).
 
 The sentences whose classification results are to be explained are specified as a list in `explainer.py`. 
 
     samples = [
-        "It 's not horrible , just horribly mediocre .",
-        "The cast is uniformly excellent ... but the film itself is merely mildly charming .",
+        "It's not horrible, just horribly mediocre.",
+        "The cast is uniformly excellent... but the film itself is merely mildly charming.",
     ]
 
 Run the explainer for the list of sentences using each, or all the classification methods as follows:
@@ -184,3 +184,12 @@ Run the explainer for the list of sentences using each, or all the classificatio
     python3 explainer.py --method transformer
 
 This outputs HTML files with embeds showing the explanations for each sample sentence for each classifier used.
+
+# Demo Front-end Dashboard
+A front-end dashboard that takes in a text sample and outputs LIME explanations for the different methods is deployed using Heroku: https://sst5-explainer.herokuapp.com/
+
+Play with your own text examples as shown below and see the fine-grained sentiment results explained!
+
+**NOTE:** Because the PyTorch-based models (Flair and the causal transformer) are quite expensive to run inference with (they require a GPU), these methods are not deployed.
+
+![](data/assets/explainer-app.gif)

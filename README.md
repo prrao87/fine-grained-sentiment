@@ -30,10 +30,23 @@ The training of the linear models (Logistic Regression and SVM) are done during 
 Training code for the models is provided in the `training` directory. 
 
 #### FastText
-To train the FastText model, run `train_fasttext.py`. For this case, the following hyperparameters were used in training the SST-5 dataset.
+To train the FastText model, it is strongly recommended to use automatic hyperparameter  optimization [as per the documentation](https://fasttext.cc/docs/en/autotune.html).
 
-    cd training
-    python3 train_fasttext.py --lr 0.5 --epochs 100 --wordNgrams 3 --ws 3 --dim 100
+First, build the fastText command line interface from source (Unix only):
+
+    $ wget https://github.com/facebookresearch/fastText/archive/v0.9.1.zip
+    $ unzip v0.9.1.zip
+    $ cd fastText-0.9.1
+    $ make
+
+Then, perform automatic tuning using the below command to find the optimum hyperparameters, by specifying paths to the training and dev set. [Quantization](https://fasttext.cc/docs/en/autotune.html#constrain-model-size) (to reduce model size) is also tuned in this process - in this case we set a maximum model size of 10 MB. Verbosity is enabled to see what hyperparameters gave the best F1-score.
+
+    ./fasttext supervised -input ../data/sst/sst_train.txt -output ../model_hyperopt \
+    -autotune-validation ../data/sst/sst_dev.txt -autotune-modelsize 10M -verbose 3
+
+This outputs the trained model (`.ftz` extension) that gives the best F1-score on our dataset. 
+
+The Python file `training/train_fasttext.py` can also be used for training the FastText model from within Python (without having to build the CLI from source) - however, the Python API does not have auto-tune capability so the hyperparameters have to be tuned manually (not recommended).
 
 #### Flair
 To train the Flair model, run `train_flair.py`. To enhance the model's context, we can stack word embeddings (either GloVe, ELMo or Bert) with Flair's string embeddings. This model takes significantly longer to run on a GPU-enabled machine (of the order of several hours).
@@ -111,7 +124,7 @@ To run a single case just pass one method as an argument:
  
     python3 predictor.py --method textblob
 
-All methods from the dictionary can be run sequentially as follows:
+All methods from the dictionary can be run sequentially using a single command as follows:
 
     python3 predictor.py --method textblob vader logistic svm fasttext flair
 

@@ -232,19 +232,32 @@ class TransformerSentiment(Base):
                             "and its config file ({0}/model_training_args.bin)."
                             .format(model_path))
 
+    def encode(self, inputs):
+        return list(self.tokenizer.convert_tokens_to_ids(o) for o in inputs)
+
     def score(self, text: str) -> int:
         "Return an integer value of predicted class from the transformer model."
         import torch
         import torch.nn.functional as F
-        self.model.eval()
+
+        self.model.eval()   # Disable dropout
         clf_token = self.tokenizer.vocab['[CLS]']  # classifier token
         pad_token = self.tokenizer.vocab['[PAD]']  # pad token
-        tok = self.tokenizer.tokenize(text)
-        ids = self.tokenizer.convert_tokens_to_ids(tok) + [clf_token]
-        with torch.no_grad():
+        max_length = self.config['config'].num_max_positions  # Max length from trained model
+        inputs = self.tokenizer.tokenize(text)
+
+        # Trim or pad data to max sequence length for this transformer
+        if len(inputs) >= max_length:
+            inputs = inputs[:max_length - 1]
+            ids = self.encode(inputs) + [clf_token]
+        else:
+            pad = [pad_token] * (max_length - len(inputs) - 1)
+            ids = self.encode(inputs) + [clf_token] + pad
+
+        with torch.no_grad():   # Disable backprop
             tensor = torch.tensor(ids, dtype=torch.long).to(self.device)
             tensor = tensor.reshape(1, -1)
-            tensor_in = tensor.transpose(0, 1).contiguous()  # [S, 1]
+            tensor_in = tensor.transpose(0, 1).contiguous()  # to shape [seq length, 1]
             logits = self.model(tensor_in,
                                 clf_tokens_mask=(tensor_in == clf_token),
                                 padding_mask=(tensor == pad_token))

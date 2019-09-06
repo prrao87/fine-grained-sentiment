@@ -135,7 +135,7 @@ If at a later time, multiple versions of trained models need to be run sequentia
 OR 
 
     python3 predictor.py --method flair --model models/flair/best-model-elmo.pt
-    python3 predictor.py --method flair --model models/flair/best-model-glove.pt
+    python3 predictor.py --method flair --model models/flair/best-model-bert.pt
 
 To run the predictor for a new transformer model, simply specify the model path. The path specified must contain the PyTorch `config` metadata file (`.bin`) and the PyTorch model weights (`.pth`).
 

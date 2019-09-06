@@ -32,7 +32,7 @@ METHODS = {
     },
     'fasttext': {
         'class': "FastTextSentiment",
-        'model': "models/fasttext/sst-5.ftz"
+        'model': "models/fasttext/sst5_hyperopt.ftz"
     },
     'flair': {
         'class': "FlairSentiment",
@@ -63,7 +63,7 @@ def run_classifier(files: Tuple[str, str, str],
                    method_class: Base,
                    model_file: str,
                    lower_case: bool) -> None:
-    "Inherit classes from models.py and apply the predict/accuracy methods"
+    "Inherit classes from classifiers.py and apply the predict/accuracy methods"
     train, dev, test = files  # Unpack train, dev and test filenames
     result = method_class.predict(train, test, lower_case)
     method_class.accuracy(result)

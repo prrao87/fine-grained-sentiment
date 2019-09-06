@@ -34,9 +34,8 @@ To train the FastText model, it is strongly recommended to use automatic hyperpa
 
 First, build the fastText command line interface from source (Unix only):
 
-    $ wget https://github.com/facebookresearch/fastText/archive/v0.9.1.zip
-    $ unzip v0.9.1.zip
-    $ cd fastText-0.9.1
+    $ git clone https://github.com/facebookresearch/fastText.git
+    $ cd fastText
     $ make
 
 Then, perform automatic tuning using the below command to find the optimum hyperparameters, by specifying paths to the training and dev set. [Quantization](https://fasttext.cc/docs/en/autotune.html#constrain-model-size) (to reduce model size) is also tuned in this process - in this case we set a maximum model size of 10 MB. Verbosity is enabled to see what hyperparameters gave the best F1-score.

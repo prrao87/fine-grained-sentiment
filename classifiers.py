@@ -245,14 +245,9 @@ class TransformerSentiment(Base):
         pad_token = self.tokenizer.vocab['[PAD]']  # pad token
         max_length = self.config['config'].num_max_positions  # Max length from trained model
         inputs = self.tokenizer.tokenize(text)
-
-        # Trim or pad data to max sequence length for this transformer
         if len(inputs) >= max_length:
             inputs = inputs[:max_length - 1]
-            ids = self.encode(inputs) + [clf_token]
-        else:
-            pad = [pad_token] * (max_length - len(inputs) - 1)
-            ids = self.encode(inputs) + [clf_token] + pad
+        ids = self.encode(inputs) + [clf_token]
 
         with torch.no_grad():   # Disable backprop
             tensor = torch.tensor(ids, dtype=torch.long).to(self.device)

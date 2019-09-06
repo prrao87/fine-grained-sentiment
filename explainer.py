@@ -27,7 +27,7 @@ METHODS = {
     },
     'fasttext': {
         'class': "FastTextExplainer",
-        'file': "models/fasttext/sst-5.ftz"
+        'file': "models/fasttext/sst_hyperopt.ftz"
     },
     'flair': {
         'class': "FlairExplainer",
@@ -282,23 +282,30 @@ class TransformerExplainer:
                             "and its config file ({0}/model_training_args.bin)."
                             .format(model_file))
 
+    def encode(self, inputs):
+        return list(self.tokenizer.convert_tokens_to_ids(o) for o in inputs)
+
     def predict(self, texts: List[str]) -> np.array([float, ...]):
         "Return an integer value of predicted class from the transformer model."
         import torch
         import torch.nn.functional as F
 
-        self.model.eval()  # Switch to model evaluation mode
+        self.model.eval()   # Disable dropout
         clf_token = self.tokenizer.vocab['[CLS]']  # classifier token
         pad_token = self.tokenizer.vocab['[PAD]']  # pad token
+        max_length = self.config['config'].num_max_positions  # Max length from trained model
 
         probs = []  # Process each text and get softmax probabilities
         for text in tqdm(texts):
-            tok = self.tokenizer.tokenize(text)
-            ids = self.tokenizer.convert_tokens_to_ids(tok) + [clf_token]
-            with torch.no_grad():
+            inputs = self.tokenizer.tokenize(text)
+            if len(inputs) >= max_length:
+                inputs = inputs[:max_length - 1]
+            ids = self.encode(inputs) + [clf_token]
+
+            with torch.no_grad():   # Disable backprop
                 tensor = torch.tensor(ids, dtype=torch.long).to(self.device)
                 tensor = tensor.reshape(1, -1)
-                tensor_in = tensor.transpose(0, 1).contiguous()  # [S, 1]
+                tensor_in = tensor.transpose(0, 1).contiguous()  # to shape [seq length, 1]
                 logits = self.model(tensor_in,
                                     clf_tokens_mask=(tensor_in == clf_token),
                                     padding_mask=(tensor == pad_token))
@@ -309,9 +316,9 @@ class TransformerExplainer:
 
 
 def explainer(method: str,
-         path_to_file: str,
-         text: str,
-         num_samples: int) -> LimeTextExplainer:
+              path_to_file: str,
+              text: str,
+              num_samples: int) -> LimeTextExplainer:
     """Run LIME explainer on provided classifier"""
 
     model = explainer_class(method, path_to_file)
@@ -369,7 +376,7 @@ def main(samples: List[str]) -> None:
 if __name__ == "__main__":
     # Evaluation text
     samples = [
-        "It's not horrible, just horribly mediocre.",
-        "The cast is uniformly excellent ... but the film itself is merely mildly charming.",
+        "It's not horrible, just horribly mediocre."
+        # "The cast is uniformly excellent ... but the film itself is merely mildly charming.",
     ]
     main(samples)

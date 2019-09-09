@@ -60,7 +60,7 @@ The below examples show how to train Flair models with stacked word/string embed
 To resume training from a checkpoint, just pass in the path to the checkpoint file.
 
     cd training
-    python3 train_flair.py --stack glove --checkpoint models/flair/bert/checkpoint.pt --epochs 25
+    python3 train_flair.py --stack elmo --checkpoint models/flair/elmo/checkpoint.pt --epochs 25
 
 Training this model to 50-100 epochs can take more than a day on a single GPU.
 

@@ -178,7 +178,7 @@ To make it easier to update the explainer framework with more methods over time,
         }
     }
 **Note**: 
-- The rule-based approaches (TextBlob and Vader) do *not* output class probabilities (they simply output a float score of sentiment in the range `[-1, 1]`). To explain these results using LIME, we artificially generate class probabilities for each class using a combination of binning (to get an integer class in the range `[1-5]` depending the float value), and then "simulating" the class probabilities using a normal distribution with the mean equal to the predicted class. *This approach is hacky* and is by no means formal, but it allows us to feed the outputs of TextBlob and Vader as probabilities to the LIME explainer (which is what it expects).
+- The rule-based approaches (TextBlob and Vader) do *not* output class probabilities (they simply output a float score of sentiment in the range `[-1, 1]`). To explain these results using LIME, we artificially generate class probabilities for each class using a combination of binning (to get an integer class in the range `[1-5]` depending the float value), and then "simulating" the class probabilities using a normal distribution with the mean equal to the predicted class. *This approach is hacky* and is by no means the "right" way to do this, but it allows us to compare the outputs of rule-based classifiers like TextBlob and VADER on an equal footing (using similar metrics) as the learning-based classifiers.
 - For the logistic regression and SVM, specify the path to the *training data* (the logistic regression model is trained within the explainer class) while for the other learners, point to the trained classifier models directly. 
 - For the transformer, specify just the *model path* (with the metadata and model file in that path).
 
@@ -197,11 +197,15 @@ Run the explainer for the list of sentences using each, or all the classificatio
 
 This outputs HTML files with embeds showing the explanations for each sample sentence for each classifier used.
 
-# Demo Front-end Dashboard
-A front-end dashboard that takes in a text sample and outputs LIME explanations for the different methods is deployed using Heroku: https://sst5-explainer.herokuapp.com/
+# Demo Front-end App
+A simple Flask-based front-end application is developed that takes in a text sample and outputs LIME explanations for the different methods as shown below.
+* The application is deployed using Heroku: https://sst5-explainer.herokuapp.com/
+* The source code for the Flask-based app is in [this separate repository](https://github.com/prrao87/fine-grained-sentiment-app). 
 
-Play with your own text examples as shown below and see the fine-grained sentiment results explained!
+[Play with your own text examples](https://sst5-explainer.herokuapp.com/) as shown below and see the fine-grained sentiment results explained!
 
 **NOTE:** Because the PyTorch-based models (Flair and the causal transformer) are quite expensive to run inference with (they require a GPU), these methods are not deployed.
+
+
 
 ![](data/assets/explainer-app.gif)

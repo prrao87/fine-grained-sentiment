@@ -377,6 +377,6 @@ if __name__ == "__main__":
     # Evaluation text
     samples = [
         "It's not horrible, just horribly mediocre."
-        # "The cast is uniformly excellent ... but the film itself is merely mildly charming.",
+        "The cast is uniformly excellent ... but the film itself is merely mildly charming.",
     ]
     main(samples)

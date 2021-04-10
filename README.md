@@ -32,18 +32,19 @@ Training code for the models is provided in the `training` directory.
 #### FastText
 To train the FastText model, it is strongly recommended to use automatic hyperparameter  optimization [as per the documentation](https://fasttext.cc/docs/en/autotune.html). As of v0.9.2, this functionality is available via the Python API, alongside the pip-installed FastText.
 
-Perform automatic tuning using the below command to find the optimum hyperparameters, by specifying paths to the training and dev (validation) set. [Quantization](https://fasttext.cc/docs/en/autotune.html#constrain-model-size) (to reduce model size) is also tuned in this process - in this case we set a maximum model size of 10 MB. Verbosity is enabled to see what hyperparameters gave the best F1-score on the validation set.
+Perform automatic tuning using the below command to find the optimum hyperparameters, by specifying paths to the training and dev (validation) set. [Quantization](https://fasttext.cc/docs/en/autotune.html#constrain-model-size) (to reduce model size) is also tuned in this process - in this case we set a maximum model size of **10 MB**. Verbosity is enabled by default to see what hyperparameters gave the best F1-score on the validation set. The training duration is set as **1800 sec** by default (half an hour). This can be changed accordingly depending on the training budget, so that more trials can be run to explore the sample space for optimum hyperparameters.
 
 ```
-python3 train_fasttext.py --filepath ../data/sst \
- --model fasttext_model_name \
- --train sst_train.txt \
- --valid sst_dev.txt \
- --duration 1800 \
- --modelsize 5M
+python3 train_fasttext.py \
+  --filepath ../data/sst \
+  --model model_name \
+  --train sst_train.txt \
+  --valid sst_dev.txt \
+  --duration 1800 \
+  --modelsize 10M
 ```
 
-The training duration is set as 1800 seconds by default (half an hour). This can be changed accordingly depending on the training budget, so that more trials can be run to explore the sample space for optimum hyperparameters. Once the training and hyperparameter tuning process completes, this outputs the trained model (`.ftz` extension) to the specified `--model` path.
+Once the training and hyperparameter tuning process completes, this outputs the trained model (`.ftz` extension) to the specified `--model` path.
 
 #### Flair
 To train the Flair model, run `train_flair.py`. To enhance the model's context, we can stack word embeddings (either GloVe, ELMo or Bert) with Flair's string embeddings. This model takes significantly longer to run on a GPU-enabled machine (of the order of several hours).
